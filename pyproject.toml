@@ -1,0 +1,24 @@
+[project]
+name = "conduit-connect"
+version = "0.1.0"
+description = "Enterprise Knowledge Integration Service"
+requires-python = ">=3.10,<3.13"
+dependencies = [
+    "atlassian-python-api>=3.41.0",
+    "pydantic>=2.0.0",
+    "click>=8.1.0",
+    "rich>=13.0.0",
+    "PyYAML>=6.0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "black>=23.7.0",
+    "isort>=5.12.0",
+    "mypy>=1.4.1",
+    "ruff>=0.0.284",
+]
+
+[project.scripts]
+conduit = "conduit.cli.main:cli"
