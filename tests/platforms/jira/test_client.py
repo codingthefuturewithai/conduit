@@ -18,9 +18,10 @@ def jira_client(mock_config):
         yield client
 
 def test_connect_success(jira_client):
-    with patch('conduit.platforms.jira.client.Jira') as mock_jira:
+    # We need to patch Jira at the class level since it's already instantiated
+    with patch('atlassian.Jira') as mock_jira_class:
         jira_client.connect()
-        mock_jira.assert_called_once_with(
+        mock_jira_class.assert_called_once_with(
             url='https://example.atlassian.net',
             token='dummy_token'
         )

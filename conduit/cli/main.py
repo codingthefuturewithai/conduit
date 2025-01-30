@@ -25,6 +25,7 @@ def get_issue(platform_name, issue_key):
     """Get an issue by key."""
     try:
         platform = PlatformRegistry.get_platform(platform_name)
+        platform.connect()
         issue = platform.get(issue_key)
         click.echo(issue)
     except PlatformError as e:
@@ -45,12 +46,20 @@ def search_issues(platform_name, query):
 
 @cli.command()
 @click.argument('platform_name')
+@click.argument('project_key')
 @click.option('--summary', required=True, help='Summary of the issue')
-def create_issue(platform_name, summary):
-    """Create a new issue."""
+@click.option('--description', default='', help='Description of the issue')
+def create_issue(platform_name, project_key, summary, description):
+    """Create a new issue in the specified project."""
     try:
         platform = PlatformRegistry.get_platform(platform_name)
-        issue = platform.create(summary=summary)
+        platform.connect()
+        issue = platform.create(
+            project={'key': project_key},
+            summary=summary,
+            description=description,
+            issuetype={'name': 'Task'}
+        )
         click.echo(f"Issue created: {issue}")
     except PlatformError as e:
         click.echo(f"Error: {e}")
@@ -63,6 +72,7 @@ def update_issue(platform_name, issue_key, summary):
     """Update an existing issue."""
     try:
         platform = PlatformRegistry.get_platform(platform_name)
+        platform.connect()
         platform.update(issue_key, summary=summary)
         click.echo(f"Issue {issue_key} updated")
     except PlatformError as e:
