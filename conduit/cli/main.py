@@ -37,6 +37,7 @@ def search_issues(platform_name, query):
     """Search for issues."""
     try:
         platform = PlatformRegistry.get_platform(platform_name)
+        platform.connect()
         issues = platform.search(query)
         click.echo(issues)
     except PlatformError as e:

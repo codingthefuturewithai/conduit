@@ -18,11 +18,9 @@ def jira_client(mock_config):
         yield client
 
 def test_connect_success(jira_client):
-    with patch('conduit.platforms.jira.client.load_config') as mock_load_config:
-        mock_load_config.return_value.jira.url = 'https://example.atlassian.net'
-        mock_load_config.return_value.jira.api_token = 'dummy_token'
+    with patch('conduit.platforms.jira.client.Jira') as mock_jira:
         jira_client.connect()
-        jira_client.jira.assert_called_with(
+        mock_jira.assert_called_once_with(
             url='https://example.atlassian.net',
             token='dummy_token'
         )

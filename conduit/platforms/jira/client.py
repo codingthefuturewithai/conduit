@@ -20,11 +20,12 @@ class JiraClient(Platform, IssueManager):
     def connect(self) -> None:
         logger.info("Connecting to Jira...")
         try:
-            self.jira = Jira(
-                url=self.config.url,
-                token=self.config.api_token
-            )
-            logger.info("Connected to Jira successfully.")
+            if not self.jira:
+                self.jira = Jira(
+                    url=self.config.url,
+                    token=self.config.api_token
+                )
+                logger.info("Connected to Jira successfully.")
         except Exception as e:
             logger.error(f"Failed to connect to Jira: {e}")
             raise PlatformError(f"Failed to connect to Jira: {e}")
@@ -33,8 +34,11 @@ class JiraClient(Platform, IssueManager):
         self.jira = None
 
     def get(self, key: str) -> Dict[str, Any]:
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
         try:
-            return self.jira.issue(key)
+            issue = self.jira.issue(key)
+            return issue.raw if hasattr(issue, 'raw') else issue
         except Exception as e:
             raise PlatformError(f"Failed to get issue {key}: {e}")
 
