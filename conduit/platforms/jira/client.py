@@ -55,7 +55,14 @@ class JiraClient(Platform, IssueManager):
         if not self.jira:
             raise PlatformError("Not connected to Jira")
         try:
-            return self.jira.create_issue(**kwargs)
+            fields = {
+                'project': kwargs.pop('project'),
+                'summary': kwargs.pop('summary'),
+                'description': kwargs.pop('description', ''),
+                'issuetype': kwargs.pop('issuetype'),
+                **kwargs
+            }
+            return self.jira.issue_create(fields=fields)
         except Exception as e:
             raise PlatformError(f"Failed to create issue: {e}")
 
@@ -63,6 +70,8 @@ class JiraClient(Platform, IssueManager):
         if not self.jira:
             raise PlatformError("Not connected to Jira")
         try:
-            self.jira.issue_update(key, kwargs)
+            fields = {k: v for k, v in kwargs.items() if v is not None}
+            if fields:
+                self.jira.issue_update(key, fields=fields)
         except Exception as e:
             raise PlatformError(f"Failed to update issue {key}: {e}")
