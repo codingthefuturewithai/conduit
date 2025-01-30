@@ -1,7 +1,7 @@
 from atlassian import Jira
 from conduit.platforms.base import Platform, IssueManager
 from conduit.core.config import load_config
-from conduit.core.exceptions import PlatformError
+from conduit.core.exceptions import ConfigurationError, PlatformError
 import logging
 from typing import Any, Dict
 

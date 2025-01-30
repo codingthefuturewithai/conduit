@@ -2,6 +2,7 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel
 
+from conduit.core.exceptions import ConfigurationError
 from conduit.platforms.jira.config import JiraConfig
 
 class Config(BaseModel):
