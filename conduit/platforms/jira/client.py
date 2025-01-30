@@ -27,7 +27,6 @@ class JiraClient(Platform, IssueManager):
             logger.info("Connected to Jira successfully.")
         except Exception as e:
             logger.error(f"Failed to connect to Jira: {e}")
-            logger.error(f"Failed to connect to Jira: {e}")
             raise PlatformError(f"Failed to connect to Jira: {e}")
 
     def disconnect(self) -> None:
@@ -41,7 +40,8 @@ class JiraClient(Platform, IssueManager):
 
     def search(self, query: str) -> list[Dict[str, Any]]:
         try:
-            return self.jira.jql(query)
+            result = self.jira.jql(query)
+            return result['issues']
         except Exception as e:
             raise PlatformError(f"Failed to search issues with query '{query}': {e}")
 

@@ -33,9 +33,11 @@ def test_get_issue_success(jira_client):
     assert issue['key'] == 'TEST-1'
 
 def test_search_issues_success(jira_client):
-    mock_issue = MagicMock()
-    mock_issue.raw = {'key': 'TEST-1'}
-    jira_client.jira.jql.return_value = {'issues': [mock_issue]}
+    jira_client.jira.jql.return_value = {
+        'issues': [
+            {'key': 'TEST-1', 'fields': {'summary': 'Test Issue'}}
+        ]
+    }
     results = jira_client.search('project=TEST')
     assert len(results) == 1
     assert results[0]['key'] == 'TEST-1'
