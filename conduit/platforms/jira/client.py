@@ -64,8 +64,17 @@ class JiraClient(Platform, IssueManager):
                 'description': kwargs.get('description', ''),
                 'issuetype': {'name': kwargs.get('issuetype', {}).get('name', 'Task')}
             }
-            logger.debug(f"Creating issue with fields: {fields}")
-            result = self.jira.issue_create(fields=fields)
+            logger.info(f"Creating issue with fields: {fields}")
+            logger.info(f"Jira API URL: {self.config.url}")
+            logger.info(f"API Token length: {len(self.config.api_token)}")
+            
+            try:
+                result = self.jira.issue_create(fields=fields)
+                logger.info(f"API Response: {result}")
+            except Exception as api_error:
+                logger.error(f"API Error details: {str(api_error)}")
+                raise
+                
             if not result:
                 raise PlatformError("No response from Jira API")
             return result
