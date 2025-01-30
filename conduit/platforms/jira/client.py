@@ -23,9 +23,9 @@ class JiraClient(Platform, IssueManager):
             if not self.jira:
                 self.jira = Jira(
                     url=self.config.url,
-                    username='admin',  # Jira Cloud API token requires email as username
+                    username=self.config.email,
                     password=self.config.api_token,
-                    cloud=True  # Specify this is a Jira Cloud instance
+                    cloud=True
                 )
                 logger.info("Connected to Jira successfully.")
         except Exception as e:
@@ -72,7 +72,7 @@ class JiraClient(Platform, IssueManager):
             
             try:
                 logger.info("Making API call to create issue...")
-                result = self.jira.create_issue(fields=fields)
+                result = self.jira.issue_create(fields=fields)
                 logger.info(f"API Response: {result}")
             except Exception as api_error:
                 logger.error(f"API Error details: {str(api_error)}")
