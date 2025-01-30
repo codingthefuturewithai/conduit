@@ -69,10 +69,15 @@ class JiraClient(Platform, IssueManager):
             logger.info(f"API Token length: {len(self.config.api_token)}")
             
             try:
-                result = self.jira.issue_create(fields=fields)
+                logger.info("Making API call to create issue...")
+                result = self.jira.create_issue(fields=fields)
                 logger.info(f"API Response: {result}")
             except Exception as api_error:
                 logger.error(f"API Error details: {str(api_error)}")
+                logger.error(f"API Error type: {type(api_error)}")
+                if hasattr(api_error, 'response'):
+                    logger.error(f"Response status: {api_error.response.status_code}")
+                    logger.error(f"Response body: {api_error.response.text}")
                 raise
                 
             if not result:
