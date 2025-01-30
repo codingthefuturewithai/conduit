@@ -23,7 +23,9 @@ class JiraClient(Platform, IssueManager):
             if not self.jira:
                 self.jira = Jira(
                     url=self.config.url,
-                    token=self.config.api_token
+                    username='admin',  # Jira Cloud API token requires email as username
+                    password=self.config.api_token,
+                    cloud=True  # Specify this is a Jira Cloud instance
                 )
                 logger.info("Connected to Jira successfully.")
         except Exception as e:
