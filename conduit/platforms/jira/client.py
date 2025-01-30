@@ -47,31 +47,41 @@ class JiraClient(Platform, IssueManager):
             raise PlatformError("Not connected to Jira")
         try:
             result = self.jira.jql(query)
+            if not result or 'issues' not in result:
+                return []
             return result['issues']
         except Exception as e:
-            raise PlatformError(f"Failed to search issues with query '{query}': {e}")
+            logger.error(f"Search error: {str(e)}")
+            raise PlatformError(f"Failed to search issues with query '{query}': {str(e)}")
 
     def create(self, **kwargs) -> Dict[str, Any]:
         if not self.jira:
             raise PlatformError("Not connected to Jira")
         try:
             fields = {
-                'project': kwargs.pop('project'),
-                'summary': kwargs.pop('summary'),
-                'description': kwargs.pop('description', ''),
-                'issuetype': kwargs.pop('issuetype'),
-                **kwargs
+                'project': {'key': kwargs['project']['key']},
+                'summary': kwargs['summary'],
+                'description': kwargs.get('description', ''),
+                'issuetype': {'name': kwargs.get('issuetype', {}).get('name', 'Task')}
             }
-            return self.jira.issue_create(fields=fields)
+            logger.debug(f"Creating issue with fields: {fields}")
+            result = self.jira.issue_create(fields=fields)
+            if not result:
+                raise PlatformError("No response from Jira API")
+            return result
         except Exception as e:
-            raise PlatformError(f"Failed to create issue: {e}")
+            logger.error(f"Create error: {str(e)}")
+            raise PlatformError(f"Failed to create issue: {str(e)}")
 
     def update(self, key: str, **kwargs) -> None:
         if not self.jira:
             raise PlatformError("Not connected to Jira")
         try:
             fields = {k: v for k, v in kwargs.items() if v is not None}
-            if fields:
-                self.jira.issue_update(key, fields=fields)
+            if not fields:
+                return
+            logger.debug(f"Updating issue {key} with fields: {fields}")
+            self.jira.issue_update(key, {'fields': fields})
         except Exception as e:
-            raise PlatformError(f"Failed to update issue {key}: {e}")
+            logger.error(f"Update error: {str(e)}")
+            raise PlatformError(f"Failed to update issue {key}: {str(e)}")
