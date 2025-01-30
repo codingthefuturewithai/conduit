@@ -43,6 +43,8 @@ class JiraClient(Platform, IssueManager):
             raise PlatformError(f"Failed to get issue {key}: {e}")
 
     def search(self, query: str) -> list[Dict[str, Any]]:
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
         try:
             result = self.jira.jql(query)
             return result['issues']
@@ -50,13 +52,17 @@ class JiraClient(Platform, IssueManager):
             raise PlatformError(f"Failed to search issues with query '{query}': {e}")
 
     def create(self, **kwargs) -> Dict[str, Any]:
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
         try:
-            return self.jira.create_issue(fields=kwargs)
+            return self.jira.create_issue(**kwargs)
         except Exception as e:
             raise PlatformError(f"Failed to create issue: {e}")
 
     def update(self, key: str, **kwargs) -> None:
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
         try:
-            self.jira.update_issue(key, fields=kwargs)
+            self.jira.issue_update(key, kwargs)
         except Exception as e:
             raise PlatformError(f"Failed to update issue {key}: {e}")
