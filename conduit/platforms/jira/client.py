@@ -9,9 +9,13 @@ from conduit.core.logger import logger
 
 class JiraClient(Platform, IssueManager):
     def __init__(self):
-        self.config = load_config().jira
-        logger.info("Disconnected from Jira.")
-        self.jira = None
+        try:
+            self.config = load_config().jira
+            self.jira = None
+            logger.info("Initialized Jira client")
+        except (FileNotFoundError, ConfigurationError) as e:
+            logger.error(f"Failed to initialize Jira client: {e}")
+            raise
 
     def connect(self) -> None:
         logger.info("Connecting to Jira...")

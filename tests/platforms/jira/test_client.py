@@ -4,7 +4,14 @@ from conduit.platforms.jira.client import JiraClient
 from conduit.core.exceptions import PlatformError
 
 @pytest.fixture
-def jira_client():
+def mock_config():
+    with patch('conduit.platforms.jira.client.load_config') as mock:
+        mock.return_value.jira.url = 'https://example.atlassian.net'
+        mock.return_value.jira.api_token = 'dummy_token'
+        yield mock
+
+@pytest.fixture
+def jira_client(mock_config):
     client = JiraClient()
     with patch('conduit.platforms.jira.client.Jira') as MockJira:
         client.jira = MockJira.return_value
