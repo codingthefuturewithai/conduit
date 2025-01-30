@@ -2,11 +2,10 @@ from pathlib import Path
 import yaml
 from pydantic import BaseModel
 
-class JiraConfig(BaseModel):
-    url: str
-    api_token: str
+from conduit.platforms.jira.config import JiraConfig
 
 class Config(BaseModel):
+    """Base configuration class."""
     jira: JiraConfig
 
 def load_config() -> Config:
