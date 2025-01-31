@@ -79,3 +79,54 @@ def children(parent_id: str):
             click.echo(f"- {page['title']} (ID: {page['id']})")
     except PlatformError as e:
         click.echo(f"Error: {str(e)}", err=True)
+
+
+@pages.command()
+@click.argument("space_key")
+@click.option("--depth", default="all", help="Depth of the content tree to return")
+@click.option("--start", default=0, help="Start index for pagination")
+@click.option("--limit", default=500, help="Maximum number of items to return")
+@click.option(
+    "--expand",
+    default="body.storage",
+    help="Comma-separated list of properties to expand",
+)
+def content(
+    space_key: str,
+    depth: str,
+    start: int,
+    limit: int,
+    expand: str,
+):
+    """Show detailed content of pages in a space."""
+    try:
+        client = PlatformRegistry.get_platform("confluence")
+        client.connect()
+
+        click.echo(f"Fetching content from space {space_key}...")
+        content = client.get_space_content(
+            space_key,
+            depth=depth,
+            start=start,
+            limit=limit,
+            expand=expand,
+        )
+
+        if not content or not content.get("page", {}).get("results"):
+            click.echo(f"No content found in space {space_key}")
+            return
+
+        pages = content["page"]["results"]
+        click.echo(f"\nFound {len(pages)} pages in space {space_key}:")
+
+        for page in pages:
+            click.echo(f"\n=== {page['title']} (ID: {page['id']}) ===")
+            if "body" in page and "storage" in page["body"]:
+                click.echo("Content:")
+                click.echo(page["body"]["storage"]["value"])
+            else:
+                click.echo("(No content available)")
+            click.echo("=" * (len(page["title"]) + 10))  # Add separator line
+
+    except PlatformError as e:
+        click.echo(f"Error: {str(e)}", err=True)

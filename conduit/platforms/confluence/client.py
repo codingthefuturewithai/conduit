@@ -179,3 +179,52 @@ class ConfluenceClient(Platform):
             raise PlatformError(
                 f"Failed to get child pages for parent {parent_id}: {e}"
             )
+
+    def get_space_content(
+        self,
+        space_key: str,
+        depth: str = "all",
+        start: int = 0,
+        limit: int = 500,
+        expand: str = "body.storage",
+    ) -> Dict[str, Any]:
+        """
+        Get space content with expanded details including body content.
+
+        Args:
+            space_key: The key of the space to get content from
+            depth: Depth of the content tree to return (default: "all")
+            start: Start index for pagination (default: 0)
+            limit: Maximum number of items to return (default: 500)
+            expand: Comma-separated list of properties to expand (default: "body.storage")
+
+        Returns:
+            Dictionary containing space content with expanded details
+
+        Raises:
+            PlatformError: If the operation fails
+        """
+        if not self.confluence:
+            raise PlatformError("Not connected to Confluence")
+
+        try:
+            logger.info(f"Getting content for space: {space_key}")
+            logger.debug(f"Using expand parameters: {expand}")
+
+            content = self.confluence.get_space_content(
+                space_key,
+                depth=depth,
+                start=start,
+                limit=limit,
+                expand=expand,
+            )
+
+            logger.info(f"Successfully retrieved content for space {space_key}")
+            return content
+
+        except Exception as e:
+            logger.error(f"Failed to get content for space {space_key}: {e}")
+            if hasattr(e, "response"):
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            raise PlatformError(f"Failed to get content for space {space_key}: {e}")
