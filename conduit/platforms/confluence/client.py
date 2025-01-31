@@ -5,6 +5,7 @@ from conduit.core.config import load_config
 from conduit.core.logger import logger
 from conduit.core.exceptions import ConfigurationError, PlatformError
 from conduit.platforms.base import Platform
+from conduit.platforms.confluence.content import ConfluenceContentCleaner
 
 
 class ConfluenceClient(Platform):
@@ -14,6 +15,7 @@ class ConfluenceClient(Platform):
         try:
             self.config = load_config().confluence
             self.confluence = None
+            self.content_cleaner = ConfluenceContentCleaner()
             logger.info("Initialized Confluence client")
         except (FileNotFoundError, ConfigurationError) as e:
             logger.error(f"Failed to initialize Confluence client: {e}")
@@ -187,6 +189,7 @@ class ConfluenceClient(Platform):
         start: int = 0,
         limit: int = 500,
         expand: str = "body.storage",
+        format: str = "storage",
     ) -> Dict[str, Any]:
         """
         Get space content with expanded details including body content.
@@ -197,13 +200,20 @@ class ConfluenceClient(Platform):
             start: Start index for pagination (default: 0)
             limit: Maximum number of items to return (default: 500)
             expand: Comma-separated list of properties to expand (default: "body.storage")
+            format: Content format to return (default: "storage")
+                   - "storage": Raw Confluence storage format
+                   - "clean": Cleaned text with minimal formatting
 
         Returns:
             Dictionary containing space content with expanded details
 
         Raises:
             PlatformError: If the operation fails
+            ValueError: If an invalid format is specified
         """
+        if format not in ["storage", "clean"]:
+            raise ValueError('format must be either "storage" or "clean"')
+
         if not self.confluence:
             raise PlatformError("Not connected to Confluence")
 
@@ -218,6 +228,14 @@ class ConfluenceClient(Platform):
                 limit=limit,
                 expand=expand,
             )
+
+            # If clean format requested, process the content
+            if format == "clean" and content.get("page", {}).get("results"):
+                for page in content["page"]["results"]:
+                    if "body" in page and "storage" in page["body"]:
+                        page["body"]["clean"] = self.content_cleaner.clean(
+                            page["body"]["storage"]["value"]
+                        )
 
             logger.info(f"Successfully retrieved content for space {space_key}")
             return content

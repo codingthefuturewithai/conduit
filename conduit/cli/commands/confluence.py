@@ -91,12 +91,19 @@ def children(parent_id: str):
     default="body.storage",
     help="Comma-separated list of properties to expand",
 )
+@click.option(
+    "--format",
+    default="storage",
+    type=click.Choice(["storage", "clean"]),
+    help="Content format to return",
+)
 def content(
     space_key: str,
     depth: str,
     start: int,
     limit: int,
     expand: str,
+    format: str,
 ):
     """Show detailed content of pages in a space."""
     try:
@@ -110,6 +117,7 @@ def content(
             start=start,
             limit=limit,
             expand=expand,
+            format=format,
         )
 
         if not content or not content.get("page", {}).get("results"):
@@ -121,7 +129,10 @@ def content(
 
         for page in pages:
             click.echo(f"\n=== {page['title']} (ID: {page['id']}) ===")
-            if "body" in page and "storage" in page["body"]:
+            if format == "clean" and "body" in page and "clean" in page["body"]:
+                click.echo("Content:")
+                click.echo(page["body"]["clean"])
+            elif "body" in page and "storage" in page["body"]:
                 click.echo("Content:")
                 click.echo(page["body"]["storage"]["value"])
             else:
