@@ -1,6 +1,8 @@
 from typing import Dict, Type
 from conduit.platforms.base import Platform
 from conduit.platforms.jira.client import JiraClient
+from conduit.platforms.confluence.client import ConfluenceClient
+
 
 class PlatformRegistry:
     _registry: Dict[str, Type[Platform]] = {}
@@ -15,5 +17,7 @@ class PlatformRegistry:
             raise ValueError(f"Platform '{name}' is not registered.")
         return cls._registry[name]()
 
-# Register the JiraClient
-PlatformRegistry.register('jira', JiraClient)
+
+# Register the platforms
+PlatformRegistry.register("jira", JiraClient)
+PlatformRegistry.register("confluence", ConfluenceClient)

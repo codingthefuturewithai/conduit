@@ -1,7 +1,9 @@
 import click
+
 from conduit.platforms.registry import PlatformRegistry
 from conduit.core.exceptions import PlatformError
 from conduit.cli.commands.jira import jira
+from conduit.cli.commands.confluence import confluence
 
 
 @click.group()
@@ -12,6 +14,7 @@ def cli():
 
 # Register commands
 cli.add_command(jira)
+cli.add_command(confluence)
 
 
 @cli.command()
