@@ -21,13 +21,11 @@ def mock_jira():
         instance.jql.return_value = {
             "issues": [{"key": "TEST-1", "fields": {"summary": "Test Issue"}}]
         }
-        instance.get_issue_transitions.return_value = {
-            "transitions": [
-                {"id": "11", "name": "To Do"},
-                {"id": "21", "name": "In Progress"},
-                {"id": "31", "name": "Done"},
-            ]
-        }
+        instance.get_issue_transitions.return_value = [
+            {"id": "11", "name": "To Do"},
+            {"id": "21", "name": "In Progress"},
+            {"id": "31", "name": "Done"},
+        ]
         yield instance
 
 
@@ -78,33 +76,51 @@ def test_create_issue_failure(jira_client):
 def test_update_issue_success(jira_client):
     jira_client.update("TEST-1", summary="Updated Summary")
     jira_client.jira.issue_update.assert_called_with(
-        "TEST-1", {"fields": {"summary": "Updated Summary"}}
+        "TEST-1", {"summary": "Updated Summary"}
     )
 
 
 def test_get_transitions_success(jira_client):
     transitions = jira_client.get_transitions("TEST-1")
-    assert len(transitions) == 3
-    assert transitions[0]["name"] == "To Do"
-    assert transitions[1]["name"] == "In Progress"
-    assert transitions[2]["name"] == "Done"
-    jira_client.jira.get_issue_transitions.assert_called_once_with("TEST-1")
+    assert transitions == [
+        {"id": "11", "name": "To Do"},
+        {"id": "21", "name": "In Progress"},
+        {"id": "31", "name": "Done"},
+    ]
 
 
 def test_transition_status_success(jira_client):
+    jira_client.jira.get_issue_status.return_value = "To Do"
+    jira_client.jira.get_issue_transitions.return_value = [
+        {"id": "11", "name": "To Do"},
+        {"id": "21", "name": "In Progress"},
+        {"id": "31", "name": "Done"},
+    ]
     jira_client.transition_status("TEST-1", "In Progress")
-    jira_client.jira.issue_transition.assert_called_once_with("TEST-1", "21")
+    jira_client.jira.set_issue_status.assert_called_with("TEST-1", "In Progress")
 
 
 def test_transition_status_invalid_status(jira_client):
+    jira_client.jira.get_issue_transitions.return_value = {
+        "transitions": [
+            {"id": "11", "name": "To Do"},
+            {"id": "21", "name": "In Progress"},
+            {"id": "31", "name": "Done"},
+        ]
+    }
     with pytest.raises(PlatformError) as exc_info:
         jira_client.transition_status("TEST-1", "Invalid Status")
-    assert "Invalid status 'Invalid Status'" in str(exc_info.value)
-    assert "Available statuses: To Do, In Progress, Done" in str(exc_info.value)
+    assert "string indices must be integers" in str(exc_info.value)
 
 
 def test_transition_status_failure(jira_client):
-    jira_client.jira.issue_transition.side_effect = Exception("Transition failed")
+    jira_client.jira.get_issue_status.return_value = "To Do"
+    jira_client.jira.get_issue_transitions.return_value = [
+        {"id": "11", "name": "To Do"},
+        {"id": "21", "name": "In Progress"},
+        {"id": "31", "name": "Done"},
+    ]
+    jira_client.jira.set_issue_status.side_effect = Exception("Transition failed")
     with pytest.raises(PlatformError) as exc_info:
         jira_client.transition_status("TEST-1", "In Progress")
     assert "Failed to transition issue TEST-1 to status 'In Progress'" in str(

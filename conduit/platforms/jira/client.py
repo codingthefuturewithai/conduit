@@ -100,7 +100,7 @@ class JiraClient(Platform, IssueManager):
             if not fields:
                 return
             logger.debug(f"Updating issue {key} with fields: {fields}")
-            self.jira.issue_update(key, {"fields": fields})
+            self.jira.issue_update(key, fields)
         except Exception as e:
             logger.error(f"Update error: {str(e)}")
             raise PlatformError(f"Failed to update issue {key}: {str(e)}")
