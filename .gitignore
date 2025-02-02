@@ -43,6 +43,7 @@ coverage.xml
 *.swp
 *.swo
 .DS_Store
+.VSCodeCounter/
 
 # Project specific
 .aider.chat.history.md

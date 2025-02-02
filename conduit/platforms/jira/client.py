@@ -105,6 +105,29 @@ class JiraClient(Platform, IssueManager):
             logger.error(f"Update error: {str(e)}")
             raise PlatformError(f"Failed to update issue {key}: {str(e)}")
 
+    def add_comment(self, key: str, comment: str) -> Dict[str, Any]:
+        """Add a comment to a Jira issue.
+
+        Args:
+            key: The issue key (e.g., 'PROJ-123')
+            comment: The comment text to add
+
+        Returns:
+            Dict containing the created comment information
+
+        Raises:
+            PlatformError: If adding the comment fails
+        """
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
+        try:
+            logger.debug(f"Adding comment to issue {key}: {comment}")
+            result = self.jira.issue_add_comment(key, comment)
+            return result
+        except Exception as e:
+            logger.error(f"Failed to add comment to issue {key}: {e}")
+            raise PlatformError(f"Failed to add comment to issue {key}: {e}")
+
     def get_transitions(self, key: str) -> List[Dict[str, Any]]:
         """Get available transitions for an issue."""
         if not self.jira:

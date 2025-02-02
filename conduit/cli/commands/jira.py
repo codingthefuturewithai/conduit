@@ -88,6 +88,22 @@ def update(key, summary, description):
 
 @issue.command()
 @click.argument("key")
+@click.argument("comment")
+def comment(key, comment):
+    """Add a comment to an issue."""
+    try:
+        platform = PlatformRegistry.get_platform("jira")
+        platform.connect()
+        result = platform.add_comment(key, comment)
+        click.echo(f"Successfully added comment to issue {key}")
+        click.echo(result)
+    except Exception as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        exit(1)
+
+
+@issue.command()
+@click.argument("key")
 @click.argument("status")
 def status(key, status):
     """Update issue status."""
