@@ -5,20 +5,39 @@ from conduit.core.exceptions import PlatformError
 
 @click.group()
 def jira():
-    """Jira commands."""
+    """Jira issue tracking commands.
+
+    Commands for managing Jira issues:
+      • Create and update issues
+      • Add comments to issues
+      • Transition issue status
+      • Search using JQL queries
+
+    Requires Jira credentials in ~/.config/conduit/config.yaml
+    """
     pass
 
 
 @jira.group()
 def issue():
-    """Issue management commands."""
+    """Commands for managing individual Jira issues.
+
+    Supports operations like:
+      • Get issue details
+      • Create/update issues
+      • Add comments
+      • Change status
+    """
     pass
 
 
 @issue.command()
 @click.argument("key")
 def get(key):
-    """Get an issue by key."""
+    """Get complete details of a Jira issue.
+
+    Example: conduit jira issue get PROJ-123
+    """
     try:
         platform = PlatformRegistry.get_platform("jira")
         platform.connect()
@@ -32,7 +51,11 @@ def get(key):
 @issue.command()
 @click.argument("query")
 def search(query):
-    """Search issues using JQL."""
+    """Search Jira issues using JQL syntax.
+
+    Supports full JQL (Jira Query Language) for advanced filtering.
+    Example: conduit jira issue search "project = PROJ AND status = 'In Progress'"
+    """
     try:
         platform = PlatformRegistry.get_platform("jira")
         platform.connect()
@@ -44,12 +67,16 @@ def search(query):
 
 
 @issue.command()
-@click.option("--project", required=True, help="Project key")
-@click.option("--summary", required=True, help="Issue summary")
-@click.option("--description", default="", help="Issue description")
-@click.option("--type", default="Task", help="Issue type")
+@click.option("--project", required=True, help="Project key (e.g., PROJ)")
+@click.option("--summary", required=True, help="Issue title/summary")
+@click.option("--description", default="", help="Detailed issue description")
+@click.option("--type", default="Task", help="Issue type (Task, Bug, Story, etc.)")
 def create(project, summary, description, type):
-    """Create a new issue."""
+    """Create a new Jira issue.
+
+    Creates an issue with specified fields in the given project.
+    Example: conduit jira issue create --project PROJ --summary "New Feature" --type Story
+    """
     try:
         platform = PlatformRegistry.get_platform("jira")
         platform.connect()
@@ -67,10 +94,14 @@ def create(project, summary, description, type):
 
 @issue.command()
 @click.argument("key")
-@click.option("--summary", help="New summary")
-@click.option("--description", help="New description")
+@click.option("--summary", help="New issue title/summary")
+@click.option("--description", help="New issue description")
 def update(key, summary, description):
-    """Update an issue."""
+    """Update an existing Jira issue's fields.
+
+    Modify the summary and/or description of the specified issue.
+    Example: conduit jira issue update PROJ-123 --summary "Updated Feature"
+    """
     try:
         platform = PlatformRegistry.get_platform("jira")
         platform.connect()
@@ -90,7 +121,11 @@ def update(key, summary, description):
 @click.argument("key")
 @click.argument("comment")
 def comment(key, comment):
-    """Add a comment to an issue."""
+    """Add a comment to a Jira issue.
+
+    Posts a new comment on the specified issue.
+    Example: conduit jira issue comment PROJ-123 "Work in progress"
+    """
     try:
         platform = PlatformRegistry.get_platform("jira")
         platform.connect()
@@ -106,7 +141,11 @@ def comment(key, comment):
 @click.argument("key")
 @click.argument("status")
 def status(key, status):
-    """Update issue status."""
+    """Update a Jira issue's status.
+
+    Transitions the issue to a new workflow status.
+    Example: conduit jira issue status PROJ-123 "In Progress"
+    """
     try:
         platform = PlatformRegistry.get_platform("jira")
         platform.connect()
