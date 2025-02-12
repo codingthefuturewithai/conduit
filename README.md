@@ -105,6 +105,12 @@ conduit jira issue update PROJ-123 --summary "Updated Summary"
 conduit jira issue status PROJ-123 "In Progress"
 ```
 
+6. Get remote links:
+
+```bash
+conduit jira issue remote-links PROJ-123
+```
+
 #### Confluence Commands
 
 1. List pages in a space (limited number):

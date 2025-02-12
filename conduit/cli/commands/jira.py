@@ -154,3 +154,31 @@ def status(key, status):
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         exit(1)
+
+
+@issue.command()
+@click.argument("key")
+def remote_links(key):
+    """Get all remote links associated with a Jira issue.
+
+    Lists all external links (URLs) that have been added to the issue.
+    Example: conduit jira issue remote-links PROJ-123
+    """
+    try:
+        platform = PlatformRegistry.get_platform("jira")
+        platform.connect()
+        links = platform.get_remote_links(key)
+        if not links:
+            click.echo("No remote links found for this issue.")
+            return
+        for link in links:
+            relationship = link.get("relationship", "relates to")
+            object_data = link.get("object", {})
+            title = object_data.get("title", "No title")
+            url = object_data.get("url", "No URL")
+            click.echo(f"\n{title}")
+            click.echo(f"Relationship: {relationship}")
+            click.echo(f"URL: {url}")
+    except Exception as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        exit(1)

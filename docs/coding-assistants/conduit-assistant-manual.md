@@ -48,6 +48,20 @@ Note: Only use these status values unless directed otherwise by the user:
 - In Progress
 - Done
 
+## Get Remote Links
+
+Syntax:
+conduit jira issue remote-links <issue_key>
+
+Example:
+conduit jira issue remote-links PROJ-123
+
+This command displays:
+
+- Title of each remote link
+- Relationship type
+- URL of the remote link
+
 # Response Format
 
 When getting an issue (conduit jira issue get), the response includes:

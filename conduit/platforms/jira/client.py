@@ -177,3 +177,23 @@ class JiraClient(Platform, IssueManager):
             raise PlatformError(
                 f"Failed to transition issue {key} to status '{status}': {e}"
             )
+
+    def get_remote_links(self, key: str) -> List[Dict[str, Any]]:
+        """Get all remote links for a Jira issue.
+
+        Args:
+            key: The issue key (e.g., 'PROJ-123')
+
+        Returns:
+            List of remote link objects containing details like relationship, url, title etc.
+
+        Raises:
+            PlatformError: If not connected or if the API request fails
+        """
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
+        try:
+            remote_links = self.jira.get_issue_remote_links(key)
+            return remote_links
+        except Exception as e:
+            raise PlatformError(f"Failed to get remote links for issue {key}: {e}")
