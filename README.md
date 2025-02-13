@@ -1,6 +1,8 @@
 # Conduit - Enterprise Knowledge Integration Service
 
-Conduit is a Python-based service designed to provide a unified, consistent interface for AI tools and applications to interact with enterprise knowledge and collaboration platforms. We're starting with Jira and Confluence integration, as these are among the most widely used tools in software development teams, but plan to expand to many other platforms. Our vision extends beyond just issue tracking and content management - we aim to integrate with a broad ecosystem of development tools, knowledge bases, and productivity platforms to create a comprehensive bridge between AI assistants and your team's tools.
+Conduit is a Python-based integration framework designed to provide a unified, consistent interface for AI tools and applications to interact with enterprise knowledge and collaboration platforms. Currently in an experimental stage and evolving rapidly, Conduit focuses on Atlassian tools (Jira and Confluence) as its initial integration targets. Our vision extends beyond just issue tracking and content management - over time,we plan to integrate with a broad ecosystem of development tools (like GitHub, Notion, Trello), knowledge bases, and productivity platforms to create a comprehensive bridge between AI assistants and your team's tools.
+
+Although Conduit is currently only accessible via the command line, we plan to eventually expose it via other interfaces (such as Anthropics's Model Context Protocol and/or a REST API) for programmatic access and integration with AI assistants and other applications.
 
 ## Why Conduit?
 
