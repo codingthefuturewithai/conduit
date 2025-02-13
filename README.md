@@ -1,5 +1,7 @@
 # Conduit - Enterprise Knowledge Integration Service
 
+[![PyPI version](https://badge.fury.io/py/conduit-connect.svg)](https://badge.fury.io/py/conduit-connect)
+
 Conduit is a Python-based integration framework designed to provide a unified, consistent interface for AI tools and applications to interact with enterprise knowledge and collaboration platforms. Currently in an experimental stage and evolving rapidly, Conduit focuses on Atlassian tools (Jira and Confluence) as its initial integration targets. Our vision extends beyond just issue tracking and content management - over time,we plan to integrate with a broad ecosystem of development tools (like GitHub, Notion, Trello), knowledge bases, and productivity platforms to create a comprehensive bridge between AI assistants and your team's tools.
 
 Although Conduit is currently only accessible via the command line, we plan to eventually expose it via other interfaces (such as Anthropics's Model Context Protocol and/or a REST API) for programmatic access and integration with AI assistants and other applications.
@@ -246,12 +248,33 @@ conduit config list --platform jira
 conduit config list --platform confluence
 ```
 
-The command shows:
+Example output:
 
-- URLs and associated emails for each site
-- Default site configuration
-- Additional site configurations
-- API tokens are automatically masked for security
+```text
+Platform: Jira
+Default Site: site1
+  Site: site1
+    URL: https://dev-domain.atlassian.net
+    Email: dev@example.com
+    API Token: ****
+  Site: site2
+    URL: https://staging-domain.atlassian.net
+    Email: staging@example.com
+    API Token: ****
+
+Platform: Confluence
+Default Site Configuration:
+  Site: default
+    URL: https://your-domain.atlassian.net
+    Email: your-email@example.com
+    API Token: ****
+
+Additional Sites:
+  Site: site1
+    URL: https://dev-domain.atlassian.net
+    Email: dev@example.com
+    API Token: ****
+```
 
 Configuration Management:
 
@@ -269,6 +292,68 @@ Global Options:
 ## Usage
 
 ### Command Line Interface
+
+#### Configuration Commands
+
+1. Initialize configuration:
+
+```bash
+conduit --init
+```
+
+2. List configured sites:
+
+```bash
+# List all configured sites
+conduit config list
+
+# List only Jira sites
+conduit config list --platform jira
+
+# List only Confluence sites
+conduit config list --platform confluence
+```
+
+Example output:
+
+```text
+Platform: Jira
+Default Site: site1
+  Site: site1
+    URL: https://dev-domain.atlassian.net
+    Email: dev@example.com
+    API Token: ****
+  Site: site2
+    URL: https://staging-domain.atlassian.net
+    Email: staging@example.com
+    API Token: ****
+
+Platform: Confluence
+Default Site Configuration:
+  Site: default
+    URL: https://your-domain.atlassian.net
+    Email: your-email@example.com
+    API Token: ****
+
+Additional Sites:
+  Site: site1
+    URL: https://dev-domain.atlassian.net
+    Email: dev@example.com
+    API Token: ****
+```
+
+3. Delete configuration:
+
+```bash
+conduit config clean
+```
+
+4. Test connection:
+
+```bash
+conduit connect jira
+conduit connect confluence
+```
 
 #### Jira Commands
 
