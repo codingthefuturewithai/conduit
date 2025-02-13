@@ -52,6 +52,53 @@ By bridging the gaps between your development tools and making them AI-accessibl
   - Detailed logging
   - Site alias management
 
+## Project Structure
+
+```
+conduit/
+├── cli/                    # Command-line interface
+│   ├── commands/          # Platform-specific commands
+│   │   ├── confluence.py  # Confluence CLI commands
+│   │   └── jira.py       # Jira CLI commands
+│   └── main.py           # CLI entry point and command routing
+├── config/                # Configuration management
+│   ├── config.yaml       # Default configuration template
+│   └── __init__.py       # Configuration initialization
+├── core/                  # Core functionality
+│   ├── config.py         # Configuration loading and validation
+│   ├── exceptions.py     # Custom exception definitions
+│   └── logger.py         # Logging configuration
+└── platforms/            # Platform integrations
+    ├── base.py          # Base classes for platforms
+    ├── registry.py      # Platform registration system
+    ├── confluence/      # Confluence integration
+    │   ├── client.py    # Confluence API client
+    │   ├── config.py    # Confluence configuration
+    │   └── content.py   # Content processing utilities
+    └── jira/            # Jira integration
+        ├── client.py    # Jira API client
+        └── config.py    # Jira configuration
+
+tests/                    # Test suite
+└── platforms/           # Platform integration tests
+    └── jira/            # Jira-specific tests
+
+manual_testing/          # Manual testing resources
+├── confluence_commands.md  # Confluence CLI examples
+└── jira_commands.md       # Jira CLI examples
+```
+
+The project follows a modular architecture designed for extensibility:
+
+- **CLI Layer**: Implements the command-line interface with platform-specific command modules
+- **Configuration**: Handles YAML-based configuration with multi-site support
+- **Core**: Provides shared utilities for configuration, logging, and error handling
+- **Platforms**: Contains platform-specific implementations with a common interface
+  - Each platform is isolated in its own module
+  - `base.py` defines the common interface
+  - `registry.py` enables dynamic platform registration
+  - Platform-specific clients handle API interactions
+
 ## Installation
 
 ### Requirements
