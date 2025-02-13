@@ -36,13 +36,14 @@ def pages():
 @pages.command()
 @click.argument("space")
 @click.option("--limit", default=10, help="Maximum number of pages to return")
-def list(space, limit):
+@click.option("--site", help="Site alias to use for this operation")
+def list(space, limit, site):
     """List pages in a Confluence space.
 
-    Example: conduit confluence pages list SPACE --limit 20
+    Example: conduit confluence pages list SPACE --limit 20 [--site site1]
     """
     try:
-        platform = PlatformRegistry.get_platform("confluence")
+        platform = PlatformRegistry.get_platform("confluence", site_alias=site)
         platform.connect()
         pages = platform.get_pages_by_space(space, limit=limit)
         click.echo(pages)
@@ -55,7 +56,8 @@ def list(space, limit):
 @click.argument("space")
 @click.option("--format", default="clean", help="Output format: clean, storage, or raw")
 @click.option("--depth", default="root", help="Content depth: root, all, or children")
-def content(space, format, depth):
+@click.option("--site", help="Site alias to use for this operation")
+def content(space, format, depth, site):
     """Get content from a Confluence space.
 
     Format options:
@@ -63,10 +65,10 @@ def content(space, format, depth):
       • storage: Raw Confluence storage format
       • raw: Unprocessed API response
 
-    Example: conduit confluence pages content SPACE --format clean --depth all
+    Example: conduit confluence pages content SPACE --format clean --depth all [--site site1]
     """
     try:
-        platform = PlatformRegistry.get_platform("confluence")
+        platform = PlatformRegistry.get_platform("confluence", site_alias=site)
         platform.connect()
         content = platform.get_space_content(space, format=format, depth=depth)
         click.echo(content)
@@ -78,10 +80,14 @@ def content(space, format, depth):
 @pages.command()
 @click.argument("space_key")
 @click.option("--batch-size", default=100, help="Number of pages to fetch per request")
-def list_all(space_key: str, batch_size: int):
-    """List all pages in a space using pagination."""
+@click.option("--site", help="Site alias to use for this operation")
+def list_all(space_key: str, batch_size: int, site: str):
+    """List all pages in a space using pagination.
+
+    Example: conduit confluence pages list-all SPACE --batch-size 100 [--site site1]
+    """
     try:
-        client = PlatformRegistry.get_platform("confluence")
+        client = PlatformRegistry.get_platform("confluence", site_alias=site)
         client.connect()
 
         click.echo(f"Fetching all pages from space {space_key}...")
@@ -100,10 +106,14 @@ def list_all(space_key: str, batch_size: int):
 
 @pages.command()
 @click.argument("parent_id")
-def children(parent_id: str):
-    """List all child pages of a parent page."""
+@click.option("--site", help="Site alias to use for this operation")
+def children(parent_id: str, site: str):
+    """List all child pages of a parent page.
+
+    Example: conduit confluence pages children PAGE-ID [--site site1]
+    """
     try:
-        client = PlatformRegistry.get_platform("confluence")
+        client = PlatformRegistry.get_platform("confluence", site_alias=site)
         client.connect()
         pages = client.get_child_pages(parent_id)
 
@@ -122,7 +132,8 @@ def children(parent_id: str):
 @click.argument("space_key")
 @click.argument("title")
 @click.option("--format", default="clean", help="Output format: clean, storage, or raw")
-def get(space_key: str, title: str, format: str):
+@click.option("--site", help="Site alias to use for this operation")
+def get(space_key: str, title: str, format: str, site: str):
     """Get a Confluence page by its title in a specific space.
 
     Retrieves a page using its title and space key. Since titles are unique within a space,
@@ -133,10 +144,10 @@ def get(space_key: str, title: str, format: str):
       • storage: Raw Confluence storage format
       • raw: Unprocessed API response
 
-    Example: conduit confluence pages get SPACE "Page Title" --format clean
+    Example: conduit confluence pages get SPACE "Page Title" --format clean [--site site1]
     """
     try:
-        client = PlatformRegistry.get_platform("confluence")
+        client = PlatformRegistry.get_platform("confluence", site_alias=site)
         client.connect()
 
         if format not in ["clean", "storage", "raw"]:

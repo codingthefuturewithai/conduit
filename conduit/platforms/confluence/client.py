@@ -11,12 +11,15 @@ from conduit.platforms.confluence.content import ConfluenceContentCleaner
 class ConfluenceClient(Platform):
     """Client for interacting with Confluence."""
 
-    def __init__(self):
+    def __init__(self, site_alias: Optional[str] = None):
         try:
             self.config = load_config().confluence
+            self.site_config = self.config.get_site_config(site_alias)
             self.confluence = None
             self.content_cleaner = ConfluenceContentCleaner()
-            logger.info("Initialized Confluence client")
+            logger.info(
+                f"Initialized Confluence client for site: {site_alias or 'default'}"
+            )
         except (FileNotFoundError, ConfigurationError) as e:
             logger.error(f"Failed to initialize Confluence client: {e}")
             raise
@@ -27,9 +30,9 @@ class ConfluenceClient(Platform):
         try:
             if not self.confluence:
                 self.confluence = Confluence(
-                    url=self.config.url,
-                    username=self.config.email,
-                    password=self.config.api_token,
+                    url=self.site_config.url,
+                    username=self.site_config.email,
+                    password=self.site_config.api_token,
                     cloud=True,
                 )
                 logger.info("Connected to Confluence successfully.")

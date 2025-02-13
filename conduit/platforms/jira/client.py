@@ -9,9 +9,10 @@ from conduit.core.logger import logger
 
 
 class JiraClient(Platform, IssueManager):
-    def __init__(self):
+    def __init__(self, site_alias: Optional[str] = None):
         try:
             self.config = load_config().jira
+            self.site_alias = site_alias
             self.jira = None
             logger.info("Initialized Jira client")
         except (FileNotFoundError, ConfigurationError) as e:
@@ -22,10 +23,11 @@ class JiraClient(Platform, IssueManager):
         logger.info("Connecting to Jira...")
         try:
             if not self.jira:
+                site_config = self.config.get_site_config(self.site_alias)
                 self.jira = Jira(
-                    url=self.config.url,
-                    username=self.config.email,
-                    password=self.config.api_token,
+                    url=site_config.url,
+                    username=site_config.email,
+                    password=site_config.api_token,
                     cloud=True,
                 )
                 logger.info("Connected to Jira successfully.")
@@ -70,8 +72,9 @@ class JiraClient(Platform, IssueManager):
                 "issuetype": {"name": kwargs.get("issuetype", {}).get("name", "Task")},
             }
             logger.info(f"Creating issue with fields: {fields}")
-            logger.info(f"Jira API URL: {self.config.url}")
-            logger.info(f"API Token length: {len(self.config.api_token)}")
+            site_config = self.config.get_site_config(self.site_alias)
+            logger.info(f"Jira API URL: {site_config.url}")
+            logger.info(f"API Token length: {len(site_config.api_token)}")
 
             try:
                 logger.info("Making API call to create issue...")

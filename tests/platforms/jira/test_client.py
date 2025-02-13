@@ -7,9 +7,11 @@ from conduit.core.exceptions import PlatformError
 @pytest.fixture
 def mock_config():
     with patch("conduit.platforms.jira.client.load_config") as mock:
-        mock.return_value.jira.url = "https://example.atlassian.net"
-        mock.return_value.jira.email = "test@example.com"
-        mock.return_value.jira.api_token = "dummy_token"
+        site_config = MagicMock()
+        site_config.url = "https://example.atlassian.net"
+        site_config.email = "test@example.com"
+        site_config.api_token = "dummy_token"
+        mock.return_value.jira.get_site_config.return_value = site_config
         yield mock
 
 
@@ -38,9 +40,11 @@ def jira_client(mock_config, mock_jira):
 
 def test_connect_success():
     with patch("conduit.platforms.jira.client.load_config") as mock_config:
-        mock_config.return_value.jira.url = "https://example.atlassian.net"
-        mock_config.return_value.jira.email = "test@example.com"
-        mock_config.return_value.jira.api_token = "dummy_token"
+        site_config = MagicMock()
+        site_config.url = "https://example.atlassian.net"
+        site_config.email = "test@example.com"
+        site_config.api_token = "dummy_token"
+        mock_config.return_value.jira.get_site_config.return_value = site_config
 
         with patch("conduit.platforms.jira.client.Jira") as mock_jira_class:
             client = JiraClient()

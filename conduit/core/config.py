@@ -4,25 +4,55 @@ import shutil
 import os
 import importlib.resources as pkg_resources
 from pydantic import BaseModel
+from typing import Dict, Optional
 
 from conduit.core.exceptions import ConfigurationError
 from conduit.core.logger import logger
 
 
-class JiraConfig(BaseModel):
-    """Jira configuration."""
+class SiteConfig(BaseModel):
+    """Configuration for a single Atlassian site."""
 
     url: str
     email: str
     api_token: str
+
+
+class JiraConfig(BaseModel):
+    """Jira configuration."""
+
+    default_site_alias: str = "default"  # Field alias for YAML compatibility
+    sites: Dict[str, SiteConfig]
+
+    class Config:
+        alias_generator = lambda string: string.replace("_", "-")
+        populate_by_alias = True
+
+    def get_site_config(self, site_alias: Optional[str] = None) -> SiteConfig:
+        """Get the configuration for a specific site or the default site."""
+        alias = site_alias or self.default_site_alias
+        if alias not in self.sites:
+            raise ConfigurationError(f"Site configuration not found for alias: {alias}")
+        return self.sites[alias]
 
 
 class ConfluenceConfig(BaseModel):
     """Confluence configuration."""
 
-    url: str
-    email: str
-    api_token: str
+    url: str  # Default URL
+    email: str  # Default email
+    api_token: str  # Default API token
+    sites: Dict[str, SiteConfig]
+
+    def get_site_config(self, site_alias: Optional[str] = None) -> SiteConfig:
+        """Get the configuration for a specific site or the default site."""
+        if not site_alias:
+            return SiteConfig(url=self.url, email=self.email, api_token=self.api_token)
+        if site_alias not in self.sites:
+            raise ConfigurationError(
+                f"Site configuration not found for alias: {site_alias}"
+            )
+        return self.sites[site_alias]
 
 
 class Config(BaseModel):
