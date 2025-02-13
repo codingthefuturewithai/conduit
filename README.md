@@ -49,7 +49,18 @@ pip install -e .
 
 ## Configuration
 
-Create a configuration file at `~/.config/conduit/config.yaml`:
+Initialize the configuration file:
+
+```bash
+conduit --init
+```
+
+This will create a configuration file at:
+
+- Linux/macOS: `~/.config/conduit/config.yaml`
+- Windows: `%APPDATA%\conduit\config.yaml`
+
+The default configuration file will be created with placeholder values. You'll need to update it with your credentials:
 
 ```yaml
 jira:
@@ -68,6 +79,18 @@ To get your Atlassian API token:
 1. Log in to https://id.atlassian.com/manage-profile/security/api-tokens
 2. Click "Create API token"
 3. Copy the token and paste it in your config file
+
+Configuration Management:
+
+- Initialize config: `conduit --init`
+- Delete config: `conduit config clean`
+- Test connection: `conduit connect jira`
+
+Global Options:
+
+- `--verbose`: Enable detailed logging for troubleshooting
+- `--json`: Output results in JSON format
+- `--init`: Initialize configuration file
 
 ## Usage
 

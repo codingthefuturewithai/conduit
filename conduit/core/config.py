@@ -1,8 +1,12 @@
 from pathlib import Path
 import yaml
+import shutil
+import os
+import importlib.resources as pkg_resources
 from pydantic import BaseModel
 
 from conduit.core.exceptions import ConfigurationError
+from conduit.core.logger import logger
 
 
 class JiraConfig(BaseModel):
@@ -28,21 +32,39 @@ class Config(BaseModel):
     confluence: ConfluenceConfig
 
 
+def get_config_dir() -> Path:
+    """Get the configuration directory path based on the OS."""
+    if os.name == "nt":  # Windows
+        config_dir = Path(os.environ.get("APPDATA")) / "conduit"
+    else:  # Unix-like systems
+        config_dir = Path.home() / ".config" / "conduit"
+    return config_dir
+
+
+def create_default_config(config_path: Path) -> None:
+    """Create the default configuration file."""
+    config_dir = config_path.parent
+
+    # Create config directory if it doesn't exist
+    config_dir.mkdir(parents=True, exist_ok=True)
+
+    # Copy default config from package
+    try:
+        with pkg_resources.path("conduit.config", "config.yaml") as default_config:
+            shutil.copy(default_config, config_path)
+        logger.info(f"Created default configuration file at {config_path}")
+    except Exception as e:
+        raise ConfigurationError(f"Failed to create default config: {e}")
+
+
 def load_config() -> Config:
     """Load configuration from YAML file."""
-    config_path = Path.home() / ".config" / "conduit" / "config.yaml"
+    config_path = get_config_dir() / "config.yaml"
+
     if not config_path.exists():
-        raise FileNotFoundError(
-            f"Config file not found at {config_path}. "
-            "Please create this file with your credentials:\n"
-            "jira:\n"
-            "  url: 'https://your-domain.atlassian.net'\n"
-            "  email: 'your-email@example.com'\n"
-            "  api_token: 'your-api-token'\n\n"
-            "confluence:\n"
-            "  url: 'https://your-domain.atlassian.net'\n"
-            "  email: 'your-email@example.com'\n"
-            "  api_token: 'your-api-token'"
+        raise ConfigurationError(
+            f"Configuration file not found at {config_path}. "
+            "Run 'conduit --init' to create a default configuration file."
         )
 
     try:

@@ -1,52 +1,148 @@
 import click
+import functools
+import logging
+import sys
+from pathlib import Path
 
 from conduit.platforms.registry import PlatformRegistry
-from conduit.core.exceptions import PlatformError
+from conduit.core.exceptions import PlatformError, ConfigurationError
 from conduit.cli.commands.jira import jira
 from conduit.cli.commands.confluence import confluence
+from conduit.core.config import create_default_config, get_config_dir
+from conduit.core.logger import logger
 
 
-@click.group()
-def cli():
-    """Conduit: Enterprise Knowledge Integration Service
+def handle_error(func):
+    """Error handling decorator for CLI commands."""
+
+    @functools.wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            logger.error(str(e))
+            sys.exit(1)
+
+    return wrapper
+
+
+def init_config():
+    """Initialize the configuration file."""
+    config_path = get_config_dir() / "config.yaml"
+    if config_path.exists():
+        logger.error(f"Configuration file already exists at {config_path}")
+        logger.info("To start fresh, run: conduit config clean")
+        sys.exit(1)
+    try:
+        create_default_config(config_path)
+        logger.info(f"Configuration file created at: {config_path}")
+        logger.info("\nPlease update it with your credentials:")
+        logger.info(
+            "1. Get API token: https://id.atlassian.com/manage-profile/security/api-tokens"
+        )
+        logger.info("2. Update URLs to match your Atlassian domain")
+        logger.info("3. Set your email address")
+    except ConfigurationError as e:
+        logger.error(str(e))
+        sys.exit(1)
+
+
+class ConduitCLI(click.Group):
+    """Custom Click Group that handles global flags without requiring commands."""
+
+    def invoke(self, ctx):
+        """Handle global flags before command processing."""
+        if ctx.params.get("verbose"):
+            logging.getLogger().setLevel(logging.INFO)
+            logging.getLogger("conduit").setLevel(logging.DEBUG)
+            logger.debug("Verbose logging enabled")
+
+        if ctx.params.get("init"):
+            init_config()
+            sys.exit(0)
+
+        return super().invoke(ctx)
+
+
+@click.group(cls=ConduitCLI)
+@click.option(
+    "--verbose", is_flag=True, help="Enable verbose output for troubleshooting"
+)
+@click.option(
+    "--init",
+    is_flag=True,
+    help="Initialize user configuration files in standard locations",
+)
+@click.option("--json", is_flag=True, help="Output results in JSON format")
+def cli(verbose, init, json):
+    """Conduit: Enterprise Knowledge Integration Service.
 
     A unified CLI for Jira and Confluence integration.
 
     Core Features:
-      • Jira issue management
-      • Confluence documentation access
+      • Jira issue management and tracking
+      • Confluence documentation access and search
       • Seamless platform integration
       • AI-optimized content formatting
 
-    Configuration: ~/.config/conduit/config.yaml
+    Configuration:
+      • Linux/macOS: ~/.config/conduit/config.yaml
+      • Windows: %APPDATA%\conduit\config.yaml
 
     Examples:
-      $ conduit jira issue create --project PROJ --summary "New Feature"
-      $ conduit confluence pages content SPACE --format clean
-      $ conduit jira issue comment PROJ-123 "Work in progress"
+      Initialize configuration:
+        $ conduit --init
+
+      Test connection:
+        $ conduit connect jira
+
+      Create Jira issue:
+        $ conduit jira issue create --project PROJ --summary "New Feature"
+
+      Get Confluence content:
+        $ conduit confluence pages content SPACE --format clean
     """
     pass
 
 
-# Register commands
-cli.add_command(jira)
-cli.add_command(confluence)
+@cli.group()
+def config():
+    """Configuration management commands."""
+    pass
+
+
+@config.command()
+@handle_error
+def clean():
+    """Delete existing configuration file."""
+    config_path = get_config_dir() / "config.yaml"
+    if config_path.exists():
+        config_path.unlink()
+        logger.info(f"Deleted configuration file: {config_path}")
+    else:
+        logger.info("No configuration file found")
 
 
 @cli.command()
-@click.argument("platform_name")
+@click.argument("platform_name", type=click.Choice(["jira", "confluence"]))
+@handle_error
 def connect(platform_name):
-    """Test connection to a platform (jira/confluence).
+    """Test connection to a platform.
 
     Validates your credentials and connection settings for the specified platform.
-    Example: conduit connect jira
+
+    Examples:
+      $ conduit connect jira
+      $ conduit connect confluence
     """
-    try:
-        platform = PlatformRegistry.get_platform(platform_name)
-        platform.connect()
-        click.echo(f"Successfully connected to {platform_name}")
-    except PlatformError as e:
-        click.echo(f"Error: {e}")
+    platform = PlatformRegistry.get_platform(platform_name)
+    platform.connect()
+    logger.info(f"Successfully connected to {platform_name}")
+
+
+# Register platform-specific command groups
+cli.add_command(jira)
+cli.add_command(confluence)
 
 
 @cli.command()

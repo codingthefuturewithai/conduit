@@ -29,3 +29,6 @@ dev = [
 
 [project.scripts]
 conduit = "conduit.cli.main:cli"
+
+[tool.setuptools.package-data]
+conduit = ["config/*.yaml"]
