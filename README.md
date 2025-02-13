@@ -143,7 +143,13 @@ conduit confluence pages content SPACE
 conduit confluence pages content SPACE --format clean
 ```
 
-6. Advanced content retrieval with options:
+6. Get a specific page by title:
+
+```bash
+conduit confluence pages get SPACE "Page Title" --format clean
+```
+
+7. Advanced content retrieval with options:
 
 ```bash
 conduit confluence pages content SPACE \
@@ -182,6 +188,13 @@ all_pages = confluence.get_all_pages_by_space("SPACE", batch_size=100)
 
 # Get child pages
 child_pages = confluence.get_child_pages("PAGE-ID")
+
+# Get a specific page by title
+page = confluence.get_page_by_title(
+    "SPACE",
+    "Page Title",
+    expand="version,body.storage"  # optional
+)
 
 # Get space content in raw format
 content = confluence.get_space_content(

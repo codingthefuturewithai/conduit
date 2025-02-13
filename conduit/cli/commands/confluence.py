@@ -116,3 +116,54 @@ def children(parent_id: str):
             click.echo(f"- {page['title']} (ID: {page['id']})")
     except PlatformError as e:
         click.echo(f"Error: {str(e)}", err=True)
+
+
+@pages.command()
+@click.argument("space_key")
+@click.argument("title")
+@click.option("--format", default="clean", help="Output format: clean, storage, or raw")
+def get(space_key: str, title: str, format: str):
+    """Get a Confluence page by its title in a specific space.
+
+    Retrieves a page using its title and space key. Since titles are unique within a space,
+    this will return exactly one page if it exists.
+
+    Format options:
+      • clean: Formatted for AI/LLM consumption
+      • storage: Raw Confluence storage format
+      • raw: Unprocessed API response
+
+    Example: conduit confluence pages get SPACE "Page Title" --format clean
+    """
+    try:
+        client = PlatformRegistry.get_platform("confluence")
+        client.connect()
+
+        if format not in ["clean", "storage", "raw"]:
+            raise click.BadParameter('Format must be one of: "clean", "storage", "raw"')
+
+        page = client.get_page_by_title(space_key, title)
+
+        if not page:
+            click.echo(f"No page found with title '{title}' in space {space_key}")
+            return
+
+        if format == "raw":
+            click.echo(page)
+            return
+
+        if format == "clean":
+            content = client.content_cleaner.clean(page["body"]["storage"]["value"])
+        else:  # storage format
+            content = page["body"]["storage"]["value"]
+
+        click.echo(f"Title: {page['title']}")
+        click.echo(f"ID: {page['id']}")
+        click.echo(f"Version: {page['version']['number']}")
+        click.echo(f"Last Updated: {page['version']['when']}")
+        click.echo("\nContent:")
+        click.echo(content)
+
+    except Exception as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        exit(1)

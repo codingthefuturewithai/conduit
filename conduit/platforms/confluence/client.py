@@ -246,3 +246,50 @@ class ConfluenceClient(Platform):
                 logger.error(f"Response status: {e.response.status_code}")
                 logger.error(f"Response body: {e.response.text}")
             raise PlatformError(f"Failed to get content for space {space_key}: {e}")
+
+    def get_page_by_title(
+        self, space_key: str, title: str, expand: Optional[str] = None
+    ) -> Optional[Dict[str, Any]]:
+        """
+        Get a Confluence page by its title within a specific space.
+
+        Args:
+            space_key: The key of the space containing the page
+            title: The title of the page to retrieve
+            expand: Optional comma-separated list of properties to expand
+
+        Returns:
+            Dictionary containing page details if found, None if not found
+
+        Raises:
+            PlatformError: If the operation fails
+        """
+        if not self.confluence:
+            raise PlatformError("Not connected to Confluence")
+
+        try:
+            logger.info(f"Getting page by title '{title}' in space: {space_key}")
+            logger.debug(f"Using expand parameters: {expand}")
+
+            page = self.confluence.get_page_by_title(
+                space=space_key,
+                title=title,
+                expand=expand or "version,body.storage",
+            )
+
+            if page:
+                logger.info(f"Found page: {page.get('id')} - {page.get('title')}")
+                logger.debug(f"Page details: {page}")
+                return page
+            else:
+                logger.info(f"No page found with title '{title}' in space {space_key}")
+                return None
+
+        except Exception as e:
+            logger.error(f"Failed to get page '{title}' in space {space_key}: {e}")
+            if hasattr(e, "response"):
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            raise PlatformError(
+                f"Failed to get page '{title}' in space {space_key}: {e}"
+            )
