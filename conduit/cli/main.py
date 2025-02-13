@@ -8,7 +8,12 @@ from conduit.platforms.registry import PlatformRegistry
 from conduit.core.exceptions import PlatformError, ConfigurationError
 from conduit.cli.commands.jira import jira
 from conduit.cli.commands.confluence import confluence
-from conduit.core.config import create_default_config, get_config_dir
+from conduit.core.config import (
+    create_default_config,
+    get_config_dir,
+    load_config,
+    SiteConfig,
+)
 from conduit.core.logger import logger
 
 
@@ -121,6 +126,69 @@ def clean():
         logger.info(f"Deleted configuration file: {config_path}")
     else:
         logger.info("No configuration file found")
+
+
+@config.command()
+@click.option(
+    "--platform",
+    type=click.Choice(["jira", "confluence"]),
+    help="Filter results by platform",
+)
+@handle_error
+def list(platform):
+    """List configured Atlassian sites.
+
+    Shows all configured Jira and Confluence sites with their connection details.
+    Sensitive information like API tokens is masked for security.
+
+    Examples:
+      $ conduit config list
+      $ conduit config list --platform jira
+      $ conduit config list --platform confluence
+    """
+    try:
+        config = load_config()
+
+        def format_site_info(platform_name, site_alias, site_config):
+            return (
+                f"  Site: {site_alias}\n"
+                f"    URL: {site_config.url}\n"
+                f"    Email: {site_config.email}\n"
+                f"    API Token: ****"
+            )
+
+        if not platform or platform == "jira":
+            click.echo("Platform: Jira")
+            click.echo(f"Default Site: {config.jira.default_site_alias}")
+            for site_alias, site_config in config.jira.sites.items():
+                click.echo(format_site_info("Jira", site_alias, site_config))
+            click.echo()
+
+        if not platform or platform == "confluence":
+            click.echo("Platform: Confluence")
+            click.echo("Default Site Configuration:")
+            click.echo(
+                format_site_info(
+                    "Confluence",
+                    "default",
+                    SiteConfig(
+                        url=config.confluence.url,
+                        email=config.confluence.email,
+                        api_token="****",
+                    ),
+                )
+            )
+            if config.confluence.sites:
+                click.echo("\nAdditional Sites:")
+                for site_alias, site_config in config.confluence.sites.items():
+                    click.echo(format_site_info("Confluence", site_alias, site_config))
+
+    except ConfigurationError as e:
+        logger.error(f"Configuration error: {e}")
+        sys.exit(1)
+    except Exception as e:
+        logger.error(f"Unexpected error: {e}")
+        sys.exit(1)
 
 
 @cli.command()

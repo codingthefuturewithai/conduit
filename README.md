@@ -235,10 +235,29 @@ To get your Atlassian API token:
 2. Click "Create API token"
 3. Copy the token and paste it in your config file
 
+To view your configured sites:
+
+```bash
+# List all configured sites
+conduit config list
+
+# Filter by platform
+conduit config list --platform jira
+conduit config list --platform confluence
+```
+
+The command shows:
+
+- URLs and associated emails for each site
+- Default site configuration
+- Additional site configurations
+- API tokens are automatically masked for security
+
 Configuration Management:
 
 - Initialize config: `conduit --init`
 - Delete config: `conduit config clean`
+- List configured sites: `conduit config list [--platform jira|confluence]`
 - Test connection: `conduit connect jira`
 
 Global Options:
