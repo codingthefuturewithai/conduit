@@ -39,20 +39,19 @@ class JiraConfig(BaseModel):
 class ConfluenceConfig(BaseModel):
     """Confluence configuration."""
 
-    url: str  # Default URL
-    email: str  # Default email
-    api_token: str  # Default API token
+    default_site_alias: str = "default"  # Field alias for YAML compatibility
     sites: Dict[str, SiteConfig]
+
+    class Config:
+        alias_generator = lambda string: string.replace("_", "-")
+        populate_by_alias = True
 
     def get_site_config(self, site_alias: Optional[str] = None) -> SiteConfig:
         """Get the configuration for a specific site or the default site."""
-        if not site_alias:
-            return SiteConfig(url=self.url, email=self.email, api_token=self.api_token)
-        if site_alias not in self.sites:
-            raise ConfigurationError(
-                f"Site configuration not found for alias: {site_alias}"
-            )
-        return self.sites[site_alias]
+        alias = site_alias or self.default_site_alias
+        if alias not in self.sites:
+            raise ConfigurationError(f"Site configuration not found for alias: {alias}")
+        return self.sites[alias]
 
 
 class Config(BaseModel):
@@ -60,6 +59,17 @@ class Config(BaseModel):
 
     jira: JiraConfig
     confluence: ConfluenceConfig
+    content_dir: Optional[Path] = None
+
+    def get_content_dir(self) -> Path:
+        """Get the content directory, creating it if needed."""
+        if not self.content_dir:
+            self.content_dir = get_config_dir() / "content"
+        else:
+            # Expand ~ to home directory if present
+            self.content_dir = Path(os.path.expanduser(str(self.content_dir)))
+        self.content_dir.mkdir(parents=True, exist_ok=True)
+        return self.content_dir
 
 
 def get_config_dir() -> Path:

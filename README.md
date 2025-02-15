@@ -33,11 +33,26 @@ By bridging the gaps between your development tools and making them AI-accessibl
   - Multi-site support with site aliases
   - Retrieve issues by key
   - Search issues using JQL
-  - Create new issues
-  - Update issue fields
-  - Add comments to issues
+  - Create new issues with markdown formatting
+  - Update issues with formatted content
+  - Add formatted comments
   - Transition issue status
   - View remote links
+  - Automatic markdown to Jira format conversion
+
+- **Content Management**
+
+  - Get paths for storing formatted content
+  - Support for standard markdown formatting
+  - Automatic conversion to platform-specific formats
+  - Clean separation of content and commands
+  - Automatic cleanup of content files after successful operations
+  - Failed content handling with dedicated storage
+  - Content file support for:
+    - Issue descriptions
+    - Issue updates
+    - Comments
+    - Future platform content
 
 - **Confluence Integration**
 
@@ -216,10 +231,8 @@ jira:
 
 confluence:
   # Default site configuration
-  url: "https://your-domain.atlassian.net"
-  email: "your-email@example.com"
-  api_token: "your-api-token"
-  # Additional site configurations
+  default-site-alias: site1
+  # Site configurations
   sites:
     site1:
       url: "https://dev-domain.atlassian.net"
@@ -263,16 +276,14 @@ Default Site: site1
     API Token: ****
 
 Platform: Confluence
-Default Site Configuration:
-  Site: default
-    URL: https://your-domain.atlassian.net
-    Email: your-email@example.com
-    API Token: ****
-
-Additional Sites:
+Default Site: site1
   Site: site1
     URL: https://dev-domain.atlassian.net
     Email: dev@example.com
+    API Token: ****
+  Site: site2
+    URL: https://staging-domain.atlassian.net
+    Email: staging@example.com
     API Token: ****
 ```
 
@@ -281,13 +292,53 @@ Configuration Management:
 - Initialize config: `conduit --init`
 - Delete config: `conduit config clean`
 - List configured sites: `conduit config list [--platform jira|confluence]`
-- Test connection: `conduit connect jira`
+- Test connection:
+
+```bash
+# Test connection to default site
+conduit connect jira
+
+# Test connection to specific site
+conduit connect confluence --site site1
+```
 
 Global Options:
 
 - `--verbose`: Enable detailed logging for troubleshooting
 - `--json`: Output results in JSON format
 - `--init`: Initialize configuration file
+
+## Content Handling
+
+Conduit uses a file-based approach for handling formatted content (descriptions, comments, etc.) to ensure reliable formatting and proper conversion between different platforms. Instead of passing content directly as command arguments, Conduit follows a two-step process:
+
+1. Get a path for storing content:
+
+   ```bash
+   path=$(conduit get-content-path)
+   ```
+
+   This generates a unique path in your configured content directory.
+
+2. Write your content to the file:
+   ```bash
+   echo "Your formatted content" > "$path"
+   ```
+   The content can include markdown formatting which will be automatically converted to the appropriate format for each platform.
+
+Benefits of this approach:
+
+- Preserves complex formatting and multi-line content
+- Avoids shell escaping issues
+- Enables proper markdown conversion
+- Provides automatic cleanup after successful operations
+- Maintains failed content for debugging
+
+Content files are automatically:
+
+- Cleaned up after successful operations
+- Moved to a `failed_content` directory if the operation fails
+- Stored in your configured content directory (`~/.config/conduit/content` by default)
 
 ## Usage
 
@@ -329,16 +380,14 @@ Default Site: site1
     API Token: ****
 
 Platform: Confluence
-Default Site Configuration:
-  Site: default
-    URL: https://your-domain.atlassian.net
-    Email: your-email@example.com
-    API Token: ****
-
-Additional Sites:
+Default Site: site1
   Site: site1
     URL: https://dev-domain.atlassian.net
     Email: dev@example.com
+    API Token: ****
+  Site: site2
+    URL: https://staging-domain.atlassian.net
+    Email: staging@example.com
     API Token: ****
 ```
 
@@ -351,9 +400,30 @@ conduit config clean
 4. Test connection:
 
 ```bash
+# Test connection to default site
 conduit connect jira
-conduit connect confluence
+
+# Test connection to specific site
+conduit connect confluence --site site1
 ```
+
+#### Working with Content Files
+
+Conduit uses content files for handling formatted text (descriptions, comments, etc.). Always use this two-step process:
+
+1. Get a path for your content:
+
+```bash
+content_path=$(conduit get-content-path)
+```
+
+2. Write your content to the file:
+
+```bash
+echo "Your formatted content" > "$content_path"
+```
+
+Note: Always use a unique variable name like `content_path` (not just `path`) to avoid shell environment conflicts.
 
 #### Jira Commands
 
@@ -372,19 +442,42 @@ conduit jira issue search "project = PROJ AND status = 'In Progress'" [--site si
 3. Create an issue:
 
 ```bash
-conduit jira issue create --project PROJ --summary "New Issue" --description "Issue description" --type Task [--site site1]
+# Get a path for your content
+content_path=$(conduit get-content-path)
+
+# Write your formatted content to the file
+echo "# Description\n\nDetailed description with *markdown* formatting" > "$content_path"
+
+# Create the issue using the content file
+conduit jira issue create PROJ --summary "New Issue" --content-file "$content_path" --type Task [--site site1]
 ```
 
 4. Update an issue:
 
 ```bash
+# Update summary only
 conduit jira issue update PROJ-123 --summary "Updated Summary" [--site site1]
+
+# Update with formatted content
+content_path=$(conduit get-content-path)
+echo "# Updated Description\n\nNew formatted content" > "$content_path"
+conduit jira issue update PROJ-123 --content-file "$content_path" [--site site1]
+
+# Update both summary and content
+conduit jira issue update PROJ-123 --summary "Updated Summary" --content-file "$content_path" [--site site1]
 ```
 
 5. Add a comment:
 
 ```bash
-conduit jira issue comment PROJ-123 "Your comment text" [--site site1]
+# Get a path for your formatted comment
+content_path=$(conduit get-content-path)
+
+# Write your formatted comment to the file
+echo "# Comment Title\n\n- Point 1\n- Point 2\n\n\`\`\`python\nprint('code example')\n\`\`\`" > "$content_path"
+
+# Add the comment using the content file
+conduit jira issue comment PROJ-123 --content-file "$content_path" [--site site1]
 ```
 
 6. Transition issue status:

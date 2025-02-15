@@ -2,6 +2,7 @@ from atlassian import Jira
 from conduit.platforms.base import Platform, IssueManager
 from conduit.core.config import load_config
 from conduit.core.exceptions import ConfigurationError, PlatformError
+from conduit.platforms.jira.content import markdown_to_jira
 import logging
 from typing import Any, Dict, Optional, List
 
@@ -65,10 +66,15 @@ class JiraClient(Platform, IssueManager):
         if not self.jira:
             raise PlatformError("Not connected to Jira")
         try:
+            # Convert description from markdown to Jira format if present
+            description = kwargs.get("description", "")
+            if description:
+                description = markdown_to_jira(description)
+
             fields = {
                 "project": {"key": kwargs["project"]["key"]},
                 "summary": kwargs["summary"],
-                "description": kwargs.get("description", ""),
+                "description": description,
                 "issuetype": {"name": kwargs.get("issuetype", {}).get("name", "Task")},
             }
             logger.info(f"Creating issue with fields: {fields}")

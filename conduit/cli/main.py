@@ -3,6 +3,7 @@ import functools
 import logging
 import sys
 from pathlib import Path
+from typing import Optional
 
 from conduit.platforms.registry import PlatformRegistry
 from conduit.core.exceptions import PlatformError, ConfigurationError
@@ -15,6 +16,7 @@ from conduit.core.config import (
     SiteConfig,
 )
 from conduit.core.logger import logger
+from conduit.core.content import ContentManager
 
 
 def handle_error(func):
@@ -166,22 +168,12 @@ def list(platform):
 
         if not platform or platform == "confluence":
             click.echo("Platform: Confluence")
-            click.echo("Default Site Configuration:")
-            click.echo(
-                format_site_info(
-                    "Confluence",
-                    "default",
-                    SiteConfig(
-                        url=config.confluence.url,
-                        email=config.confluence.email,
-                        api_token="****",
-                    ),
-                )
-            )
-            if config.confluence.sites:
-                click.echo("\nAdditional Sites:")
-                for site_alias, site_config in config.confluence.sites.items():
-                    click.echo(format_site_info("Confluence", site_alias, site_config))
+            default_site = config.confluence.default_site_alias
+            if default_site in config.confluence.sites:
+                click.echo(f"Default Site: {default_site}")
+            for site_alias, site_config in config.confluence.sites.items():
+                click.echo(format_site_info("Confluence", site_alias, site_config))
+            click.echo()
 
     except ConfigurationError as e:
         logger.error(f"Configuration error: {e}")
@@ -193,19 +185,23 @@ def list(platform):
 
 @cli.command()
 @click.argument("platform_name", type=click.Choice(["jira", "confluence"]))
+@click.option("--site", help="Site alias to use for this operation")
 @handle_error
-def connect(platform_name):
+def connect(platform_name, site):
     """Test connection to a platform.
 
     Validates your credentials and connection settings for the specified platform.
 
     Examples:
       $ conduit connect jira
-      $ conduit connect confluence
+      $ conduit connect confluence --site site1
     """
-    platform = PlatformRegistry.get_platform(platform_name)
+    platform = PlatformRegistry.get_platform(platform_name, site_alias=site)
     platform.connect()
-    logger.info(f"Successfully connected to {platform_name}")
+    logger.info(
+        f"Successfully connected to {platform_name}"
+        + (f" (site: {site})" if site else "")
+    )
 
 
 # Register platform-specific command groups
@@ -214,89 +210,27 @@ cli.add_command(confluence)
 
 
 @cli.command()
-@click.argument("platform_name")
-@click.argument("issue_key")
-def get_issue(platform_name, issue_key):
-    """Retrieve full details of a Jira issue.
+def get_content_path() -> None:
+    """Get a path for storing formatted content.
 
-    Fetches all fields, comments, and metadata for the specified issue.
-    Example: conduit get-issue jira PROJ-123
+    Returns an absolute path ending in .md that can be used to store any text-based content
+    (not just markdown). The content format should match what the target system expects.
+
+    The path will be within your configured content directory and have a unique name.
+    You are responsible for writing content to this path.
+
+    Example:
+        $ path=$(conduit get-content-path)
+        $ echo "# My Content" > "$path"
     """
     try:
-        platform = PlatformRegistry.get_platform(platform_name)
-        platform.connect()
-        issue = platform.get(issue_key)
-        click.echo(issue)
-    except PlatformError as e:
-        click.echo(f"Error: {e}")
-
-
-@cli.command()
-@click.argument("platform_name")
-@click.argument("query")
-def search_issues(platform_name, query):
-    """Search for Jira issues using JQL.
-
-    Supports full JQL (Jira Query Language) syntax for advanced searching.
-    Example: conduit search-issues jira "project = PROJ AND status = 'In Progress'"
-    """
-    try:
-        platform = PlatformRegistry.get_platform(platform_name)
-        platform.connect()
-        issues = platform.search(query)
-        click.echo(issues)
-    except PlatformError as e:
-        click.echo(f"Error: {e}")
-
-
-@cli.command()
-@click.argument("platform_name")
-@click.argument("project_key")
-@click.option("--summary", required=True, help="Title/summary of the issue")
-@click.option("--description", default="", help="Detailed description of the issue")
-def create_issue(platform_name, project_key, summary, description):
-    """Create a new Jira issue in the specified project.
-
-    Creates a Task-type issue with the given summary and description.
-    Example: conduit create-issue jira PROJ --summary "New feature" --description "Details..."
-    """
-    try:
-        platform = PlatformRegistry.get_platform(platform_name)
-        platform.connect()
-        issue = platform.create(
-            project={"key": project_key},
-            summary=summary,
-            description=description,
-            issuetype={"name": "Task"},
-        )
-        click.echo(issue)
-    except PlatformError as e:
-        click.echo(f"Error: {e}")
-
-
-@cli.command()
-@click.argument("platform_name")
-@click.argument("issue_key")
-@click.option("--summary", help="New summary/title for the issue")
-@click.option("--description", help="New description for the issue")
-def update_issue(platform_name, issue_key, summary, description):
-    """Update an existing Jira issue's fields.
-
-    Modify the summary and/or description of an existing issue.
-    Example: conduit update-issue jira PROJ-123 --summary "Updated title"
-    """
-    try:
-        platform = PlatformRegistry.get_platform(platform_name)
-        platform.connect()
-        fields = {}
-        if summary:
-            fields["summary"] = summary
-        if description:
-            fields["description"] = description
-        platform.update(issue_key, **fields)
-        click.echo(f"Successfully updated issue {issue_key}")
-    except PlatformError as e:
-        click.echo(f"Error: {e}")
+        config = load_config()
+        content_manager = ContentManager(config.get_content_dir())
+        path = content_manager.generate_content_path()
+        click.echo(str(path))
+    except Exception as e:
+        click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
