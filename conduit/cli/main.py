@@ -2,6 +2,7 @@ import click
 import functools
 import logging
 import sys
+import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -17,6 +18,7 @@ from conduit.core.config import (
 )
 from conduit.core.logger import logger
 from conduit.core.content import ContentManager
+from conduit.mcp import mcp
 
 
 def handle_error(func):
@@ -230,6 +232,32 @@ def get_content_path() -> None:
         click.echo(str(path))
     except Exception as e:
         click.echo(f"Error: {e}", err=True)
+        sys.exit(1)
+
+
+@cli.command(name="mcp")
+@click.option("--debug", is_flag=True, help="Enable debug logging")
+def mcp_cmd(debug: bool):
+    """Start the Model Context Protocol server.
+
+    This enables AI models to interact with Conduit through the MCP interface.
+
+    Examples:
+      Start MCP server:
+        $ conduit mcp
+
+      Start in debug mode:
+        $ conduit mcp --debug
+    """
+    try:
+        if debug:
+            logger.setLevel(logging.DEBUG)
+            logging.getLogger("mcp.server").setLevel(logging.DEBUG)
+
+        logger.debug("Starting MCP server...")
+        mcp.run()
+    except Exception as e:
+        logger.error(f"Failed to start MCP server: {e}", exc_info=True)
         sys.exit(1)
 
 

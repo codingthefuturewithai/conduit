@@ -65,18 +65,19 @@ def test_create_issue_with_content_file(cli_runner, mock_config, monkeypatch):
             assert kwargs["project"]["key"] == "TEST"
             return {"key": "TEST-1"}
 
-    def mock_get_platform(name):
+    def mock_get_platform(name, site_alias=None):
         return MockPlatform()
 
     monkeypatch.setattr(
-        "conduit.cli.main.PlatformRegistry.get_platform", mock_get_platform
+        "conduit.platforms.registry.PlatformRegistry.get_platform", mock_get_platform
     )
 
     result = cli_runner.invoke(
         cli,
         [
-            "create-issue",
             "jira",
+            "issue",
+            "create",
             "TEST",
             "--summary",
             "Test Issue",
@@ -93,8 +94,9 @@ def test_create_issue_nonexistent_content_file(cli_runner, mock_config):
     result = cli_runner.invoke(
         cli,
         [
-            "create-issue",
             "jira",
+            "issue",
+            "create",
             "TEST",
             "--summary",
             "Test Issue",
@@ -116,7 +118,7 @@ def test_create_issue_missing_required_options(cli_runner, mock_config):
     test_file.touch()
 
     result1 = cli_runner.invoke(
-        cli, ["create-issue", "jira", "TEST", "--content-file", str(test_file)]
+        cli, ["jira", "issue", "create", "TEST", "--content-file", str(test_file)]
     )
     assert result1.exit_code == 2
     assert "Missing option" in result1.output
@@ -124,7 +126,7 @@ def test_create_issue_missing_required_options(cli_runner, mock_config):
 
     # Missing --content-file
     result2 = cli_runner.invoke(
-        cli, ["create-issue", "jira", "TEST", "--summary", "Test Issue"]
+        cli, ["jira", "issue", "create", "TEST", "--summary", "Test Issue"]
     )
     assert result2.exit_code == 2
     assert "Missing option" in result2.output
