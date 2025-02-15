@@ -38,21 +38,6 @@ root_logger.addHandler(stderr_handler)
 mcp = FastMCP("Conduit")
 
 
-# Add test tool first to verify basic functionality
-@mcp.tool()
-def echo(message: str) -> str:
-    """Echo back a message"""
-    try:
-        response = {"result": message}
-        # Verify JSON serialization
-        json_response = json.dumps(response)
-        logger.debug(f"Echo response JSON: {json_response}")
-        return message
-    except Exception as e:
-        logger.error(f"JSON serialization error: {e}")
-        raise
-
-
 @mcp.tool()
 async def list_config() -> list[types.TextContent]:
     """List all configured Jira and Confluence sites"""
