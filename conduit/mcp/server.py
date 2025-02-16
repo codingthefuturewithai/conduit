@@ -70,13 +70,13 @@ async def list_config() -> list[types.TextContent]:
 
 
 @mcp.tool()
-async def list_confluence_pages(
-    space_key: str, site_alias: Optional[str] = None
+async def get_confluence_page(
+    space_key: str, title: str, site_alias: Optional[str] = None
 ) -> list[types.TextContent]:
-    """List all pages in a Confluence space"""
+    """Get Confluence page content by title within a space"""
     try:
         logger.debug(
-            f"Executing list_confluence_pages tool for space {space_key} with site {site_alias}"
+            f"Executing get_confluence_page for page '{title}' in space {space_key} with site {site_alias}"
         )
         # Get the Confluence client from the registry
         from conduit.platforms.registry import PlatformRegistry
@@ -84,37 +84,10 @@ async def list_confluence_pages(
         client = PlatformRegistry.get_platform("confluence", site_alias=site_alias)
         client.connect()
 
-        # Get pages using the client
-        pages = client.get_pages_by_space(space_key)
-        logger.debug(f"list_confluence_pages found {len(pages)} pages")
-        return [types.TextContent(type="text", text=str(pages))]
-    except Exception as e:
-        logger.error(f"Error in list_confluence_pages: {e}", exc_info=True)
-        raise
-
-
-@mcp.resource("confluence://{space_key}/{page_title}?site={site}")
-async def get_confluence_page_resource(
-    space_key: str, page_title: str, site: Optional[str] = None
-) -> str:
-    """Get Confluence page content as a resource"""
-    try:
-        # URL decode the page title
-        decoded_title = unquote(page_title).rstrip("?")
-
-        logger.debug(
-            f"Executing get_confluence_page_resource for page '{decoded_title}' in space {space_key} with site {site}"
-        )
-        # Get the Confluence client from the registry
-        from conduit.platforms.registry import PlatformRegistry
-
-        client = PlatformRegistry.get_platform("confluence", site_alias=site)
-        client.connect()
-
         # Get page using the client
-        page = client.get_page_by_title(space_key, decoded_title)
+        page = client.get_page_by_title(space_key, title)
         if not page:
-            raise ValueError(f"Page '{decoded_title}' not found in space {space_key}")
+            raise ValueError(f"Page '{title}' not found in space {space_key}")
 
         # Get the raw content and clean it
         raw_content = page.get("body", {}).get("storage", {}).get("value", "")
@@ -171,11 +144,135 @@ async def get_confluence_page_resource(
         markdown = f"{title_section}\n\n{details_section}\n\n{content_section}\n{formatted_content}"
 
         logger.debug(
-            f"get_confluence_page_resource formatted {len(markdown)} characters of content as markdown"
+            f"get_confluence_page formatted {len(markdown)} characters of content as markdown"
         )
-        return markdown
+        return [types.TextContent(type="text", text=markdown)]
     except Exception as e:
-        logger.error(f"Error in get_confluence_page_resource: {e}", exc_info=True)
+        logger.error(f"Error in get_confluence_page: {e}", exc_info=True)
+        raise
+
+
+@mcp.tool()
+async def search_jira_issues(
+    query: str, site_alias: Optional[str] = None
+) -> list[types.TextContent]:
+    """Search Jira issues using JQL syntax"""
+    try:
+        logger.debug(
+            f"Executing search_jira_issues tool with query '{query}' and site {site_alias}"
+        )
+        # Get the Jira client from the registry
+        from conduit.platforms.registry import PlatformRegistry
+
+        client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+        client.connect()
+
+        # Search using the client
+        results = client.search(query)
+        logger.debug(f"search_jira_issues found {len(results)} issues")
+        return [types.TextContent(type="text", text=str(results))]
+    except Exception as e:
+        logger.error(f"Error in search_jira_issues: {e}", exc_info=True)
+        raise
+
+
+@mcp.tool()
+async def create_jira_issue(
+    project: str,
+    summary: str,
+    description: str,
+    issue_type: str = "Task",
+    site_alias: Optional[str] = None,
+) -> list[types.TextContent]:
+    """Create a new Jira issue"""
+    try:
+        logger.debug(
+            f"Executing create_jira_issue tool for project '{project}' with type '{issue_type}' and site {site_alias}"
+        )
+        # Get the Jira client from the registry
+        from conduit.platforms.registry import PlatformRegistry
+
+        client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+        client.connect()
+
+        # Create the issue using the client with proper field structure
+        result = client.create(
+            project={"key": project},
+            summary=summary,
+            description=description,
+            issuetype={"name": issue_type},
+        )
+        logger.debug(f"create_jira_issue created issue: {result}")
+        return [types.TextContent(type="text", text=str(result))]
+    except Exception as e:
+        logger.error(f"Error in create_jira_issue: {e}", exc_info=True)
+        raise
+
+
+@mcp.tool()
+async def update_jira_issue(
+    key: str,
+    summary: Optional[str] = None,
+    description: Optional[str] = None,
+    site_alias: Optional[str] = None,
+) -> list[types.TextContent]:
+    """Update an existing Jira issue"""
+    try:
+        logger.debug(
+            f"Executing update_jira_issue tool for issue '{key}' with site {site_alias}"
+        )
+        # Get the Jira client from the registry
+        from conduit.platforms.registry import PlatformRegistry
+
+        client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+        client.connect()
+
+        # Build update fields dictionary with only provided values
+        fields = {}
+        if summary is not None:
+            fields["summary"] = summary
+        if description is not None:
+            fields["description"] = description
+
+        # Update the issue using the client
+        client.update(key, **fields)
+
+        # Get and return the updated issue
+        updated_issue = client.get(key)
+        logger.debug(f"update_jira_issue updated issue: {updated_issue}")
+        return [types.TextContent(type="text", text=str(updated_issue))]
+    except Exception as e:
+        logger.error(f"Error in update_jira_issue: {e}", exc_info=True)
+        raise
+
+
+@mcp.tool()
+async def list_all_confluence_pages(
+    space_key: str, batch_size: int = 100, site_alias: Optional[str] = None
+) -> list[types.TextContent]:
+    """List all pages in a Confluence space with pagination support"""
+    try:
+        logger.debug(
+            f"Executing list_all_confluence_pages tool for space {space_key} with site {site_alias} and batch_size {batch_size}"
+        )
+        # Get the Confluence client from the registry
+        from conduit.platforms.registry import PlatformRegistry
+
+        client = PlatformRegistry.get_platform("confluence", site_alias=site_alias)
+        client.connect()
+
+        # Get all pages using pagination
+        pages = client.get_all_pages_by_space(space_key, batch_size=batch_size)
+        logger.debug(f"list_all_confluence_pages found {len(pages)} pages")
+
+        # Format response as markdown
+        markdown_response = f"\nFound {len(pages)} pages in space {space_key}:\n"
+        for page in pages:
+            markdown_response += f"- {page.get('title')} (ID: {page.get('id')})\n"
+
+        return [types.TextContent(type="text", text=markdown_response)]
+    except Exception as e:
+        logger.error(f"Error in list_all_confluence_pages: {e}", exc_info=True)
         raise
 
 
