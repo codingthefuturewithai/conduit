@@ -4,7 +4,7 @@
 
 Conduit is a Python-based integration framework designed to provide a unified, consistent interface for AI tools and applications to interact with enterprise knowledge and collaboration platforms. Currently in an experimental stage and evolving rapidly, Conduit focuses on Atlassian tools (Jira and Confluence) as its initial integration targets. Our vision extends beyond just issue tracking and content management - over time,we plan to integrate with a broad ecosystem of development tools (like GitHub, Notion, Trello), knowledge bases, and productivity platforms to create a comprehensive bridge between AI assistants and your team's tools.
 
-Although Conduit is currently only accessible via the command line, we plan to eventually expose it via other interfaces (such as Anthropics's Model Context Protocol and/or a REST API) for programmatic access and integration with AI assistants and other applications.
+Conduit offers a full-featured command line interface and support for Anthropic's Model Context Protocol (MCP). While the CLI provides access to all of Conduit's capabilities, the MCP integration currently supports a focused set of core features. This allows for both comprehensive command-line usage and integration with AI tools that support MCP, such as Cursor and Claude Desktop.
 
 ## Why Conduit?
 
@@ -64,45 +64,35 @@ By bridging the gaps between your development tools and making them AI-accessibl
   - Rich text processing for AI consumption
 
 - **Configuration & Usability**
+
   - YAML-based configuration with multi-site support
   - Robust error handling
   - Detailed logging
   - Site alias management
+
+- **MCP Integration** (Experimental)
+  - Initial support for Anthropic's Model Context Protocol
+  - Compatible with Cursor and Claude Desktop
+  - Subset of features currently available via MCP
+  - Ongoing development toward full feature parity
 
 ## Project Structure
 
 ```
 conduit/
 ├── cli/                    # Command-line interface
-│   ├── commands/          # Platform-specific commands
-│   │   ├── confluence.py  # Confluence CLI commands
-│   │   └── jira.py       # Jira CLI commands
-│   └── main.py           # CLI entry point and command routing
+│   └── commands/          # Platform-specific commands
 ├── config/                # Configuration management
-│   ├── config.yaml       # Default configuration template
-│   └── __init__.py       # Configuration initialization
 ├── core/                  # Core functionality
-│   ├── config.py         # Configuration loading and validation
-│   ├── exceptions.py     # Custom exception definitions
-│   └── logger.py         # Logging configuration
-└── platforms/            # Platform integrations
-    ├── base.py          # Base classes for platforms
-    ├── registry.py      # Platform registration system
-    ├── confluence/      # Confluence integration
-    │   ├── client.py    # Confluence API client
-    │   ├── config.py    # Confluence configuration
-    │   └── content.py   # Content processing utilities
-    └── jira/            # Jira integration
-        ├── client.py    # Jira API client
-        └── config.py    # Jira configuration
+├── mcp/                   # Model Context Protocol implementation
+└── platforms/             # Platform integrations
+    ├── confluence/        # Confluence integration
+    └── jira/              # Jira integration
 
-tests/                    # Test suite
-└── platforms/           # Platform integration tests
-    └── jira/            # Jira-specific tests
+tests/                     # Test suite
+└── platforms/            # Platform integration tests
 
-manual_testing/          # Manual testing resources
-├── confluence_commands.md  # Confluence CLI examples
-└── jira_commands.md       # Jira CLI examples
+manual_testing/           # Manual testing resources
 ```
 
 The project follows a modular architecture designed for extensibility:
@@ -110,11 +100,11 @@ The project follows a modular architecture designed for extensibility:
 - **CLI Layer**: Implements the command-line interface with platform-specific command modules
 - **Configuration**: Handles YAML-based configuration with multi-site support
 - **Core**: Provides shared utilities for configuration, logging, and error handling
+- **MCP**: Implements the Model Context Protocol for AI tool integration
 - **Platforms**: Contains platform-specific implementations with a common interface
   - Each platform is isolated in its own module
-  - `base.py` defines the common interface
-  - `registry.py` enables dynamic platform registration
   - Platform-specific clients handle API interactions
+  - Common interfaces ensure consistent behavior
 
 ## Installation
 
@@ -600,14 +590,88 @@ The cleaned content format (`format="clean"`) provides:
 
 ## AI Assistant Integration
 
-Conduit is designed to enhance AI coding assistants by providing them access to your organization's knowledge base. For detailed instructions on integrating Conduit with your preferred AI assistant, visit our [AI Assistant Integration Guide](https://github.com/codingthefuturewithai/conduit/blob/main/docs/ai-assistant-integration.md).
+Conduit is designed to enhance AI coding assistants by providing them access to your organization's knowledge base. It supports two primary integration methods:
 
-Key integration capabilities:
+### 1. Model Context Protocol (MCP) - Experimental
 
-- Semantic search across Jira and Confluence content
-- Rich context retrieval for AI prompts
-- Multi-site support for complex organizations
-- Clean, AI-friendly content formatting
+Conduit provides support for Anthropic's Model Context Protocol, allowing integration with MCP-compatible AI tools. The MCP integration offers a focused set of core features, with ongoing development to expand the available capabilities. Current MCP support includes:
+
+#### Currently Supported MCP Features
+
+**Configuration**
+
+- List all configured Jira and Confluence sites
+
+**Confluence Operations**
+
+- Get page content by title within a space
+- List all pages in a space (with pagination support)
+
+**Jira Operations**
+
+- Search issues using JQL syntax
+- Create new issues (with summary, description, and issue type)
+- Update existing issues (modify summary and description)
+
+#### Current MCP Limitations
+
+- Limited to core read/write operations listed above
+- Additional Confluence operations (like space content, child pages) only available via CLI
+- Advanced Jira features (comments, transitions, remote links) only available via CLI
+- Configuration changes must be done via CLI
+- Content formatting and cleanup features limited to CLI
+
+#### Cursor Integration
+
+1. First install Conduit following the [installation instructions above](#installation).
+
+2. Get the full path to the MCP server:
+
+```bash
+which mcp-server-conduit
+```
+
+This will output something like `/Users/<username>/.local/bin/mcp-server-conduit`
+
+3. Configure Cursor:
+   - Open Cursor Settings > Features > MCP Servers
+   - Click "+ Add New MCP Server"
+   - Configure the server:
+     - Name: conduit
+     - Type: stdio
+     - Command: [paste the full path from step 2]
+
+For more details about MCP configuration in Cursor, see the [Cursor MCP documentation](https://docs.cursor.com/context/model-context-protocol).
+
+#### Claude Desktop Integration
+
+1. First install Conduit following the [installation instructions above](#installation).
+
+2. Get the full path to the MCP server:
+
+```bash
+which mcp-server-conduit
+```
+
+This will output something like `/Users/<username>/.local/bin/mcp-server-conduit`
+
+3. Configure Claude Desktop:
+   - Open Claude menu > Settings > Developer > Edit Config
+   - Add Conduit to the MCP servers configuration:
+
+```json
+{
+  "mcpServers": {
+    "conduit": {
+      "command": "/Users/<username>/.local/bin/mcp-server-conduit"
+    }
+  }
+}
+```
+
+For more details, see the [Claude Desktop MCP documentation](https://modelcontextprotocol.io/quickstart/user#for-claude-desktop-users).
+
+### 2. Command Line Interface
 
 ## Development
 
