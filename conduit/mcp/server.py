@@ -71,7 +71,7 @@ async def list_config() -> list[types.TextContent]:
 
 @mcp.tool()
 async def get_confluence_page(
-    *, space_key: str, title: str, site_alias: Optional[str] = None
+    space_key: str, title: str, site_alias: Optional[str] = None
 ) -> list[types.TextContent]:
     """Get Confluence page content by title within a space"""
     try:
