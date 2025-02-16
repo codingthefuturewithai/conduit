@@ -240,7 +240,7 @@ def get_content_path() -> None:
 @click.option(
     "--transport",
     type=click.Choice(["sse", "stdio"]),
-    default="sse",
+    default="stdio",
     help="Transport mode for MCP server (sse or stdio)",
 )
 def mcp_cmd(debug: bool, transport: str):
@@ -250,10 +250,10 @@ def mcp_cmd(debug: bool, transport: str):
 
     Examples:
       Start MCP server with SSE transport:
-        $ conduit mcp
+        $ conduit mcp --transport sse
 
-      Start with stdio transport:
-        $ conduit mcp --transport stdio
+      Start with stdio transport (default):
+        $ conduit mcp
 
       Start in debug mode:
         $ conduit mcp --debug
