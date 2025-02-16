@@ -1,11 +1,19 @@
 # __init__.py
+"""MCP server package"""
+import asyncio
 from .server import mcp
 
 
 def main():
     """Entry point for MCP server"""
     try:
-        mcp.run()
+        # Use SSE transport explicitly like the working CLI version
+        mcp.run(transport="sse")
+    except KeyboardInterrupt:
+        import logging
+
+        logger = logging.getLogger(__name__)
+        logger.info("Server stopped by user")
     except Exception as e:
         import sys
         import logging

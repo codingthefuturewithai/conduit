@@ -7,35 +7,55 @@ import logging
 import json
 import sys
 from urllib.parse import unquote
+import asyncio
+import os
 
 from conduit.core.services import ConfigService, ConfluenceService
 from conduit.core.config import load_config
 
-# Configure logging to write to stderr instead of a file
+# Configure ALL logging to write to stderr
 logging.basicConfig(
-    stream=sys.stderr,  # Write to stderr instead of a file
-    level=logging.DEBUG,
+    stream=sys.stderr,
+    level=logging.WARNING,  # Default to WARNING to reduce noise
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
-# Get all relevant loggers
+# Get loggers but keep them quiet by default
 logger = logging.getLogger("conduit.mcp")
 mcp_logger = logging.getLogger("mcp.server")
+uvicorn_logger = logging.getLogger("uvicorn")
 root_logger = logging.getLogger()
 
-# Remove any existing handlers
+# Remove any existing handlers to ensure clean stderr-only logging
 for handler in root_logger.handlers[:]:
     root_logger.removeHandler(handler)
 
 # Add stderr handler to root logger
 stderr_handler = logging.StreamHandler(sys.stderr)
-stderr_handler.setLevel(logging.DEBUG)
-formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-stderr_handler.setFormatter(formatter)
+stderr_handler.setFormatter(
+    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+)
 root_logger.addHandler(stderr_handler)
 
-# Create the server instance
-mcp = FastMCP("Conduit")
+
+def create_mcp_server() -> FastMCP:
+    """Create and configure the MCP server instance"""
+    # Get port from environment or use default
+    port = int(os.environ.get("MCP_PORT", "8000"))
+
+    # Create the server instance with minimal logging
+    mcp = FastMCP(
+        "Conduit",
+        host="localhost",
+        port=port,
+        debug=False,  # Reduce debug noise
+        log_level="WARNING",  # Keep FastMCP quiet too
+    )
+    return mcp
+
+
+# Create initial server instance
+mcp = create_mcp_server()
 
 
 @mcp.tool()
@@ -274,16 +294,3 @@ async def list_all_confluence_pages(
     except Exception as e:
         logger.error(f"Error in list_all_confluence_pages: {e}", exc_info=True)
         raise
-
-
-def main():
-    """Entry point for MCP server"""
-    try:
-        mcp.run()
-    except Exception as e:
-        logger.error(f"Failed to start MCP server: {e}", exc_info=True)
-        sys.exit(1)
-
-
-if __name__ == "__main__":
-    main()

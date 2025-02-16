@@ -3,6 +3,7 @@ import functools
 import logging
 import sys
 import asyncio
+import os
 from pathlib import Path
 from typing import Optional
 
@@ -237,7 +238,10 @@ def get_content_path() -> None:
 
 @cli.command(name="mcp")
 @click.option("--debug", is_flag=True, help="Enable debug logging")
-def mcp_cmd(debug: bool):
+@click.option(
+    "--port", type=int, default=8000, help="Port to run the server on (default: 8000)"
+)
+def mcp_cmd(debug: bool, port: int):
     """Start the Model Context Protocol server.
 
     This enables AI models to interact with Conduit through the MCP interface.
@@ -248,16 +252,70 @@ def mcp_cmd(debug: bool):
 
       Start in debug mode:
         $ conduit mcp --debug
+
+      Start on a different port:
+        $ conduit mcp --port 8001
     """
     try:
         if debug:
             logger.setLevel(logging.DEBUG)
             logging.getLogger("mcp.server").setLevel(logging.DEBUG)
 
-        logger.debug("Starting MCP server...")
-        mcp.run()
+        # Set port in environment for server.py to pick up
+        os.environ["MCP_PORT"] = str(port)
+
+        # Import after setting environment variable so we get the right port
+        from conduit.mcp.server import create_mcp_server
+
+        server = create_mcp_server()
+
+        logger.debug(f"Starting MCP server with SSE transport on port {port}...")
+        # Use asyncio.run to directly call the async method
+        asyncio.run(server.run_sse_async())
+    except KeyboardInterrupt:
+        logger.info("Server stopped by user")
     except Exception as e:
         logger.error(f"Failed to start MCP server: {e}", exc_info=True)
+        sys.exit(1)
+
+
+@cli.command(name="mcp-kill")
+def mcp_kill():
+    """Kill all running MCP server instances."""
+    try:
+        import subprocess
+        import re
+
+        # Find all Python processes running uvicorn (our MCP servers)
+        ps_cmd = "ps aux | grep '[p]ython.*conduit.*mcp'"
+        ps_output = subprocess.check_output(ps_cmd, shell=True, text=True)
+
+        if not ps_output.strip():
+            logger.info("No MCP servers found running")
+            return
+
+        # Extract PIDs
+        pids = []
+        for line in ps_output.splitlines():
+            parts = line.split()
+            if len(parts) > 1:
+                pids.append(parts[1])
+
+        if not pids:
+            logger.info("No MCP servers found running")
+            return
+
+        # Kill each process
+        for pid in pids:
+            try:
+                subprocess.run(["kill", pid], check=True)
+                logger.info(f"Killed MCP server with PID {pid}")
+            except subprocess.CalledProcessError:
+                logger.error(f"Failed to kill process {pid}")
+
+        logger.info(f"Killed {len(pids)} MCP server(s)")
+    except Exception as e:
+        logger.error(f"Error killing MCP servers: {e}")
         sys.exit(1)
 
 
