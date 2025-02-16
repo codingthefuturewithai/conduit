@@ -2,12 +2,15 @@
 
 from typing import Dict, List, Optional
 from mcp.server.fastmcp import FastMCP, Context
+from mcp.server.stdio import stdio_server
 import mcp.types as types
 import logging
 import json
 import sys
 from urllib.parse import unquote
 import asyncio
+import anyio
+import click
 
 from conduit.core.services import ConfigService, ConfluenceService
 from conduit.core.config import load_config
@@ -291,3 +294,28 @@ async def list_all_confluence_pages(
     except Exception as e:
         logger.error(f"Error in list_all_confluence_pages: {e}", exc_info=True)
         raise
+
+
+@click.command()
+@click.option("--port", default=8000, help="Port to listen on for SSE")
+@click.option(
+    "--transport",
+    type=click.Choice(["stdio", "sse"]),
+    default="stdio",
+    help="Transport type",
+)
+def main(port: int, transport: str) -> int:
+    """Run the MCP server with the specified transport."""
+    try:
+        if transport == "sse":
+            asyncio.run(mcp.run_sse_async())
+        else:
+            asyncio.run(mcp.run_stdio_async())
+        return 0
+    except Exception as e:
+        logger.error(f"Failed to start MCP server: {e}", exc_info=True)
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

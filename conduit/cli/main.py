@@ -237,14 +237,23 @@ def get_content_path() -> None:
 
 @cli.command(name="mcp")
 @click.option("--debug", is_flag=True, help="Enable debug logging")
-def mcp_cmd(debug: bool):
+@click.option(
+    "--transport",
+    type=click.Choice(["sse", "stdio"]),
+    default="sse",
+    help="Transport mode for MCP server (sse or stdio)",
+)
+def mcp_cmd(debug: bool, transport: str):
     """Start the Model Context Protocol server.
 
     This enables AI models to interact with Conduit through the MCP interface.
 
     Examples:
-      Start MCP server:
+      Start MCP server with SSE transport:
         $ conduit mcp
+
+      Start with stdio transport:
+        $ conduit mcp --transport stdio
 
       Start in debug mode:
         $ conduit mcp --debug
@@ -254,8 +263,11 @@ def mcp_cmd(debug: bool):
             logger.setLevel(logging.DEBUG)
             logging.getLogger("mcp.server").setLevel(logging.DEBUG)
 
-        logger.debug("Starting MCP server with SSE transport...")
-        mcp.run(transport="sse")  # This internally uses anyio.run() to handle async
+        logger.debug(f"Starting MCP server with {transport} transport...")
+        if transport == "stdio":
+            asyncio.run(mcp.run_stdio_async())
+        else:
+            asyncio.run(mcp.run_sse_async())
     except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:
