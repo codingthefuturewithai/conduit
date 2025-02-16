@@ -8,54 +8,51 @@ import json
 import sys
 from urllib.parse import unquote
 import asyncio
-import os
 
 from conduit.core.services import ConfigService, ConfluenceService
 from conduit.core.config import load_config
 
-# Configure ALL logging to write to stderr
+# Configure logging to write to stderr instead of a file
 logging.basicConfig(
-    stream=sys.stderr,
-    level=logging.WARNING,  # Default to WARNING to reduce noise
+    stream=sys.stderr,  # Write to stderr instead of a file
+    level=logging.DEBUG,
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 
-# Get loggers but keep them quiet by default
+# Get all relevant loggers
 logger = logging.getLogger("conduit.mcp")
 mcp_logger = logging.getLogger("mcp.server")
 uvicorn_logger = logging.getLogger("uvicorn")
 root_logger = logging.getLogger()
 
-# Remove any existing handlers to ensure clean stderr-only logging
+# Remove any existing handlers
 for handler in root_logger.handlers[:]:
     root_logger.removeHandler(handler)
 
 # Add stderr handler to root logger
 stderr_handler = logging.StreamHandler(sys.stderr)
-stderr_handler.setFormatter(
-    logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
-)
+stderr_handler.setLevel(logging.DEBUG)
+formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+stderr_handler.setFormatter(formatter)
 root_logger.addHandler(stderr_handler)
 
+# Enable debug logging for all relevant loggers
+logger.setLevel(logging.DEBUG)
+mcp_logger.setLevel(logging.DEBUG)
+uvicorn_logger.setLevel(logging.DEBUG)
 
-def create_mcp_server() -> FastMCP:
-    """Create and configure the MCP server instance"""
-    # Get port from environment or use default
-    port = int(os.environ.get("MCP_PORT", "8000"))
-
-    # Create the server instance with minimal logging
-    mcp = FastMCP(
-        "Conduit",
-        host="localhost",
-        port=port,
-        debug=False,  # Reduce debug noise
-        log_level="WARNING",  # Keep FastMCP quiet too
-    )
-    return mcp
-
-
-# Create initial server instance
-mcp = create_mcp_server()
+# Create the server instance with explicit settings
+logger.info("Creating FastMCP server")
+mcp = FastMCP(
+    "Conduit",
+    host="localhost",
+    port=8000,
+    debug=True,
+    log_level="DEBUG",
+)
+logger.info("FastMCP server instance created")
+logger.debug(f"Server attributes: {dir(mcp)}")
+logger.debug(f"Server configuration: {vars(mcp)}")
 
 
 @mcp.tool()
