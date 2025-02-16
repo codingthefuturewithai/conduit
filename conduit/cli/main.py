@@ -18,7 +18,6 @@ from conduit.core.config import (
 )
 from conduit.core.logger import logger
 from conduit.core.content import ContentManager
-from conduit.mcp import mcp
 
 
 def handle_error(func):
@@ -247,32 +246,10 @@ def mcp_cmd(debug: bool, transport: str):
     """Start the Model Context Protocol server.
 
     This enables AI models to interact with Conduit through the MCP interface.
-
-    Examples:
-      Start MCP server with SSE transport:
-        $ conduit mcp --transport sse
-
-      Start with stdio transport (default):
-        $ conduit mcp
-
-      Start in debug mode:
-        $ conduit mcp --debug
     """
-    try:
-        if debug:
-            logger.setLevel(logging.DEBUG)
-            logging.getLogger("mcp.server").setLevel(logging.DEBUG)
+    from conduit.mcp import main as mcp_main
 
-        logger.debug(f"Starting MCP server with {transport} transport...")
-        if transport == "stdio":
-            asyncio.run(mcp.run_stdio_async())
-        else:
-            asyncio.run(mcp.run_sse_async())
-    except KeyboardInterrupt:
-        logger.info("Server stopped by user")
-    except Exception as e:
-        logger.error(f"Failed to start MCP server: {e}", exc_info=True)
-        sys.exit(1)
+    mcp_main(transport)
 
 
 if __name__ == "__main__":

@@ -1,31 +1,29 @@
 # __init__.py
 """MCP server package"""
-from .server import mcp
+import asyncio
+import logging
+import sys
+from .server import create_mcp_server, get_mcp_server
 
-__all__ = ["mcp"]
+__all__ = ["create_mcp_server", "get_mcp_server"]
 
 
-def main(transport: str = "sse"):
+def main(transport: str = "stdio"):
     """Entry point for MCP server
 
     Args:
         transport: Transport mode to use ("sse" or "stdio")
     """
     try:
-        if transport == "stdio":
-            asyncio.run(mcp.run_stdio_async())
-        else:
-            asyncio.run(mcp.run_sse_async())
-    except KeyboardInterrupt:
-        import logging
-
         logger = logging.getLogger(__name__)
+        server = get_mcp_server()
+        if transport == "stdio":
+            asyncio.run(server.run_stdio_async())
+        else:
+            asyncio.run(server.run_sse_async())
+    except KeyboardInterrupt:
         logger.info("Server stopped by user")
     except Exception as e:
-        import sys
-        import logging
-
-        logger = logging.getLogger(__name__)
         logger.error(f"Failed to start MCP server: {e}", exc_info=True)
         sys.exit(1)
 
