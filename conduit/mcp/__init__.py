@@ -3,9 +3,9 @@
 import asyncio
 import logging
 import sys
-from .server import create_mcp_server, get_mcp_server
+from .server import server, create_mcp_server
 
-__all__ = ["create_mcp_server", "get_mcp_server"]
+__all__ = ["server", "create_mcp_server"]
 
 
 def main(transport: str = "stdio"):
@@ -16,7 +16,6 @@ def main(transport: str = "stdio"):
     """
     try:
         logger = logging.getLogger(__name__)
-        server = get_mcp_server()
         if transport == "stdio":
             asyncio.run(server.run_stdio_async())
         else:

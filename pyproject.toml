@@ -51,6 +51,7 @@ dev = [
 
 [project.scripts]
 conduit = "conduit.cli.main:cli"
+mcp-rag-retriever = "conduit.mcp.server:main"
 mcp-server-conduit = "conduit.mcp.server:main"
 
 [tool.setuptools.packages.find]

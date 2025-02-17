@@ -309,16 +309,8 @@ def register_tools(mcp_server: FastMCP) -> None:
             raise
 
 
-# Create the server only when needed
-mcp = None
-
-
-def get_mcp_server() -> FastMCP:
-    """Get or create the MCP server instance"""
-    global mcp
-    if mcp is None:
-        mcp = create_mcp_server()
-    return mcp
+# Create a server instance that can be imported by the MCP CLI
+server = create_mcp_server()
 
 
 @click.command()
@@ -332,7 +324,6 @@ def get_mcp_server() -> FastMCP:
 def main(port: int, transport: str) -> int:
     """Entry point for the MCP server"""
     try:
-        server = get_mcp_server()
         if transport == "stdio":
             asyncio.run(server.run_stdio_async())
         else:
