@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "conduit-connect"
-version = "0.1.4"
+version = "0.1.5"
 description = "Enterprise Knowledge Integration Service"
 readme = "README.md"
 authors = [
@@ -51,7 +51,6 @@ dev = [
 
 [project.scripts]
 conduit = "conduit.cli.main:cli"
-mcp-rag-retriever = "conduit.mcp.server:main"
 mcp-server-conduit = "conduit.mcp.server:main"
 
 [tool.setuptools.packages.find]

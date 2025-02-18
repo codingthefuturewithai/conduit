@@ -280,6 +280,34 @@ def register_tools(mcp_server: FastMCP) -> None:
             raise
 
     @mcp_server.tool()
+    async def update_jira_status(
+        key: str,
+        status: str,
+        site_alias: Optional[str] = None,
+    ) -> list[types.TextContent]:
+        """Update a Jira issue's status"""
+        try:
+            logger.debug(
+                f"Executing update_jira_status tool for issue '{key}' with new status '{status}' and site {site_alias}"
+            )
+            # Get the Jira client from the registry
+            from conduit.platforms.registry import PlatformRegistry
+
+            client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+            client.connect()
+
+            # Transition the issue status using the client
+            client.transition_status(key, status)
+
+            # Get and return the updated issue
+            updated_issue = client.get(key)
+            logger.debug(f"update_jira_status updated issue: {updated_issue}")
+            return [types.TextContent(type="text", text=str(updated_issue))]
+        except Exception as e:
+            logger.error(f"Error in update_jira_status: {e}", exc_info=True)
+            raise
+
+    @mcp_server.tool()
     async def list_all_confluence_pages(
         space_key: str, batch_size: int = 100, site_alias: Optional[str] = None
     ) -> list[types.TextContent]:
