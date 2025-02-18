@@ -304,6 +304,131 @@ def register_tools(mcp_server: FastMCP) -> None:
             raise
 
     @mcp_server.tool()
+    async def get_jira_boards(
+        project_key: Optional[str] = None,
+        site_alias: Optional[str] = None,
+    ) -> list[types.TextContent]:
+        """Get all Jira boards, optionally filtered by project"""
+        try:
+            logger.debug(
+                f"Executing get_jira_boards tool{f' for project {project_key}' if project_key else ''} with site {site_alias}"
+            )
+            # Get the Jira client from the registry
+            from conduit.platforms.registry import PlatformRegistry
+
+            client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+            client.connect()
+
+            # Get boards using the client
+            boards = client.get_boards(project_key)
+
+            # Format the response as markdown
+            markdown_response = "# Jira Boards\n\n"
+            if project_key:
+                markdown_response += f"Boards for project: {project_key}\n\n"
+
+            if not boards:
+                markdown_response += "No boards found.\n"
+            else:
+                markdown_response += f"Found {len(boards)} boards:\n\n"
+                for board in boards:
+                    markdown_response += (
+                        f"- **{board.get('name', 'Unnamed Board')}**\n"
+                        f"  - ID: {board.get('id')}\n"
+                        f"  - Type: {board.get('type', 'Unknown')}\n"
+                        f"  - Location: {board.get('location', {}).get('projectName', 'Unknown Project')}\n"
+                    )
+
+            logger.debug(f"get_jira_boards found {len(boards)} boards")
+            return [types.TextContent(type="text", text=markdown_response)]
+        except Exception as e:
+            logger.error(f"Error in get_jira_boards: {e}", exc_info=True)
+            raise
+
+    @mcp_server.tool()
+    async def get_jira_sprints(
+        board_id: int,
+        state: Optional[str] = None,
+        site_alias: Optional[str] = None,
+    ) -> list[types.TextContent]:
+        """Get all sprints from a Jira board, optionally filtered by state"""
+        try:
+            logger.debug(
+                f"Executing get_jira_sprints tool for board {board_id}{f' with state {state}' if state else ''} and site {site_alias}"
+            )
+            # Get the Jira client from the registry
+            from conduit.platforms.registry import PlatformRegistry
+
+            client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+            client.connect()
+
+            # Get sprints using the client
+            sprints = client.get_sprints(board_id, state)
+
+            # Format the response as markdown
+            markdown_response = "# Jira Sprints\n\n"
+            markdown_response += f"Sprints for board ID: {board_id}\n"
+            if state:
+                markdown_response += f"Filtered by state: {state}\n"
+            markdown_response += "\n"
+
+            if not sprints:
+                markdown_response += "No sprints found.\n"
+            else:
+                markdown_response += f"Found {len(sprints)} sprints:\n\n"
+                for sprint in sprints:
+                    markdown_response += (
+                        f"- **{sprint.get('name', 'Unnamed Sprint')}**\n"
+                        f"  - ID: {sprint.get('id')}\n"
+                        f"  - State: {sprint.get('state', 'Unknown')}\n"
+                        f"  - Start Date: {sprint.get('startDate', 'Not set')}\n"
+                        f"  - End Date: {sprint.get('endDate', 'Not set')}\n"
+                    )
+
+            logger.debug(f"get_jira_sprints found {len(sprints)} sprints")
+            return [types.TextContent(type="text", text=markdown_response)]
+        except Exception as e:
+            logger.error(f"Error in get_jira_sprints: {e}", exc_info=True)
+            raise
+
+    @mcp_server.tool()
+    async def add_issues_to_jira_sprint(
+        sprint_id: int,
+        issue_keys: List[str],
+        site_alias: Optional[str] = None,
+    ) -> list[types.TextContent]:
+        """Add one or more Jira issues to a sprint"""
+        try:
+            logger.debug(
+                f"Executing add_issues_to_jira_sprint tool for sprint {sprint_id} with issues {issue_keys} and site {site_alias}"
+            )
+            # Get the Jira client from the registry
+            from conduit.platforms.registry import PlatformRegistry
+
+            client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+            client.connect()
+
+            # Add issues to sprint
+            client.add_issues_to_sprint(sprint_id, issue_keys)
+
+            # Format the response as markdown
+            markdown_response = "# Issues Added to Sprint\n\n"
+            markdown_response += (
+                f"Successfully added the following issues to sprint {sprint_id}:\n\n"
+            )
+            for key in issue_keys:
+                issue = client.get(key)
+                markdown_response += f"- **{key}**: {issue.get('fields', {}).get('summary', 'No summary')}\n"
+
+            logger.debug(
+                f"add_issues_to_jira_sprint added {len(issue_keys)} issues to sprint {sprint_id}"
+            )
+            return [types.TextContent(type="text", text=markdown_response)]
+        except Exception as e:
+            logger.error(f"Error in add_issues_to_jira_sprint: {e}", exc_info=True)
+            raise
+
+    @mcp_server.tool()
     async def list_all_confluence_pages(
         space_key: str, batch_size: int = 100, site_alias: Optional[str] = None
     ) -> list[types.TextContent]:

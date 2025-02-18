@@ -206,3 +206,97 @@ class JiraClient(Platform, IssueManager):
             return remote_links
         except Exception as e:
             raise PlatformError(f"Failed to get remote links for issue {key}: {e}")
+
+    def get_boards(self, project_key: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get all boards visible to the user, optionally filtered by project.
+
+        Args:
+            project_key: Optional project key (e.g., 'PROJ') to filter boards by project.
+                       If not provided, returns all boards the user has permission to view.
+
+        Returns:
+            List of board objects containing details like id, name, type, etc.
+
+        Raises:
+            PlatformError: If not connected to Jira or if the API request fails
+        """
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
+        try:
+            logger.debug(
+                f"Getting boards{f' for project {project_key}' if project_key else ''}"
+            )
+            boards = self.jira.get_all_agile_boards(project_key=project_key)
+            if not boards or "values" not in boards:
+                return []
+            return boards["values"]
+        except Exception as e:
+            error_msg = f"Failed to get boards{f' for project {project_key}' if project_key else ''}"
+            logger.error(f"{error_msg}: {e}")
+            raise PlatformError(f"{error_msg}: {e}")
+
+    def get_sprints(
+        self, board_id: int, state: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        """Get all sprints from a board, optionally filtered by state.
+
+        Args:
+            board_id: The ID of the board to get sprints from
+            state: Optional state to filter sprints by. Valid values are:
+                  'active', 'future', 'closed'. If not provided, returns all sprints.
+
+        Returns:
+            List of sprint objects containing details like id, name, state, etc.
+
+        Raises:
+            PlatformError: If not connected to Jira or if the API request fails
+        """
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
+        try:
+            logger.debug(
+                f"Getting sprints for board {board_id}{f' with state {state}' if state else ''}"
+            )
+            sprints = self.jira.get_all_sprints_from_board(board_id, state=state)
+            if not sprints or "values" not in sprints:
+                return []
+            return sprints["values"]
+        except Exception as e:
+            error_msg = f"Failed to get sprints for board {board_id}{f' with state {state}' if state else ''}"
+            logger.error(f"{error_msg}: {e}")
+            raise PlatformError(f"{error_msg}: {e}")
+
+    def add_issues_to_sprint(self, sprint_id: int, issue_keys: List[str]) -> None:
+        """Add one or more issues to a sprint.
+
+        Args:
+            sprint_id: The ID of the sprint to add issues to
+            issue_keys: List of issue keys (e.g., ['PROJ-123', 'PROJ-124']) to add to the sprint
+
+        Raises:
+            PlatformError: If not connected to Jira, if the sprint doesn't exist,
+                          if any issues don't exist, or if the API request fails
+        """
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
+        try:
+            logger.debug(f"Adding issues {issue_keys} to sprint {sprint_id}")
+
+            # Verify all issues exist before attempting to add them
+            for key in issue_keys:
+                try:
+                    self.get(key)
+                except Exception as e:
+                    raise PlatformError(
+                        f"Issue {key} does not exist or is not accessible: {e}"
+                    )
+
+            # Add issues to sprint
+            self.jira.add_issues_to_sprint(sprint_id, issue_keys)
+            logger.info(f"Successfully added issues {issue_keys} to sprint {sprint_id}")
+        except PlatformError:
+            raise
+        except Exception as e:
+            error_msg = f"Failed to add issues {issue_keys} to sprint {sprint_id}"
+            logger.error(f"{error_msg}: {e}")
+            raise PlatformError(f"{error_msg}: {e}")
