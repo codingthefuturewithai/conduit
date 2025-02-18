@@ -246,8 +246,8 @@ def register_tools(mcp_server: FastMCP) -> None:
     @mcp_server.tool()
     async def update_jira_issue(
         key: str,
-        summary: Optional[str] = None,
-        description: Optional[str] = None,
+        summary: str,
+        description: str,
         site_alias: Optional[str] = None,
     ) -> list[types.TextContent]:
         """Update an existing Jira issue"""
@@ -261,12 +261,8 @@ def register_tools(mcp_server: FastMCP) -> None:
             client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
             client.connect()
 
-            # Build update fields dictionary with only provided values
-            fields = {}
-            if summary is not None:
-                fields["summary"] = summary
-            if description is not None:
-                fields["description"] = description
+            # Build update fields dictionary
+            fields = {"summary": summary, "description": description}
 
             # Update the issue using the client
             client.update(key, **fields)
