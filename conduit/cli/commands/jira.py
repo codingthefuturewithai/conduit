@@ -304,3 +304,91 @@ def remote_links(key, site):
     except Exception as e:
         click.echo(f"Error: {str(e)}", err=True)
         exit(1)
+
+
+@jira.command()
+@click.option("--project", required=True, help="Project key to get boards for")
+@click.option("--site", help="Site alias to use for this operation")
+def get_boards(project, site):
+    """Get all boards for a project.
+
+    Lists all boards associated with the specified project.
+    Example: conduit jira get-boards --project PROJ [--site site1]
+    """
+    try:
+        platform = PlatformRegistry.get_platform("jira", site_alias=site)
+        platform.connect()
+        boards = platform.get_boards(project)
+        if not boards:
+            click.echo(f"No boards found for project {project}")
+            return
+        click.echo(f"\nBoards for project {project}:")
+        for board in boards:
+            click.echo(
+                f"- {board.get('name', 'Unnamed Board')} (ID: {board.get('id')})"
+            )
+            click.echo(f"  Type: {board.get('type', 'Unknown')}")
+            click.echo(
+                f"  Location: {board.get('location', {}).get('projectName', 'Unknown Project')}\n"
+            )
+    except Exception as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        exit(1)
+
+
+@jira.command()
+@click.argument("board_id")
+@click.option(
+    "--state",
+    type=click.Choice(["active", "future", "closed"]),
+    help="Filter sprints by state",
+)
+@click.option("--site", help="Site alias to use for this operation")
+def get_sprints(board_id, state, site):
+    """Get all sprints from a board.
+
+    Lists all sprints associated with the specified board, optionally filtered by state.
+    Example: conduit jira get-sprints BOARD-123 --state active [--site site1]
+    """
+    try:
+        platform = PlatformRegistry.get_platform("jira", site_alias=site)
+        platform.connect()
+        sprints = platform.get_sprints(board_id, state)
+        if not sprints:
+            click.echo(f"No sprints found for board {board_id}")
+            return
+        click.echo(f"\nSprints for board {board_id}:")
+        for sprint in sprints:
+            click.echo(
+                f"- {sprint.get('name', 'Unnamed Sprint')} (ID: {sprint.get('id')})"
+            )
+            click.echo(f"  State: {sprint.get('state', 'Unknown')}")
+            click.echo(f"  Start Date: {sprint.get('startDate', 'Not set')}")
+            click.echo(f"  End Date: {sprint.get('endDate', 'Not set')}\n")
+    except Exception as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        exit(1)
+
+
+@jira.command()
+@click.argument("sprint_id")
+@click.option(
+    "--issues", required=True, multiple=True, help="Issue keys to add to the sprint"
+)
+@click.option("--site", help="Site alias to use for this operation")
+def add_to_sprint(sprint_id, issues, site):
+    """Add issues to a sprint.
+
+    Adds one or more issues to the specified sprint.
+    Example: conduit jira add-to-sprint SPRINT-456 --issues PROJ-123 PROJ-124 [--site site1]
+    """
+    try:
+        platform = PlatformRegistry.get_platform("jira", site_alias=site)
+        platform.connect()
+        platform.add_issues_to_sprint(sprint_id, list(issues))
+        click.echo(
+            f"Successfully added issues {', '.join(issues)} to sprint {sprint_id}"
+        )
+    except Exception as e:
+        click.echo(f"Error: {str(e)}", err=True)
+        exit(1)
