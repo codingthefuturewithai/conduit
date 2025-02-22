@@ -54,3 +54,5 @@ coverage.xml
 # Logs
 *.log
 logs/
+
+uv.lock
