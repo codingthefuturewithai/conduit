@@ -652,6 +652,25 @@ Conduit provides support for Anthropic's Model Context Protocol, allowing integr
 - Configuration changes must be done via CLI
 - Content formatting and cleanup features limited to CLI
 
+#### Development and Testing with MCP Inspector
+
+For development and testing, you can run the Conduit MCP server directly and explore its endpoints using the MCP Inspector:
+
+1. After creating a venv and installing dependencies, start the MCP server in development mode:
+
+   ```bash
+   mcp dev conduit/mcp/server.py
+   ```
+
+2. Look for the MCP Inspector URL in the output:
+
+   ```
+   MCP Inspector is up and running at http://localhost:5173
+   ```
+
+3. Open the URL in your browser and click the "Connect" button to connect to the MCP server
+4. Use the Inspector interface to explore available endpoints and test MCP functionality
+
 #### Cursor Integration
 
 1. First install Conduit following the [installation instructions above](#installation).
