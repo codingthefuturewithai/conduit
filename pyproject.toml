@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "conduit-connect"
-version = "0.1.5"
+version = "0.1.6"
 description = "Enterprise Knowledge Integration Service"
 readme = "README.md"
 authors = [
@@ -36,7 +36,8 @@ dependencies = [
     "mcp[cli]>=1.0.0",
     "anyio>=4.5",
     "starlette>=0.36.0",
-    "uvicorn>=0.27.0"
+    "uvicorn>=0.27.0",
+    "md2cf>=2.3.0"
 ]
 
 [project.optional-dependencies]

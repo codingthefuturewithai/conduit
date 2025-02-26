@@ -65,6 +65,16 @@ class ConduitCLI(click.Group):
             logging.getLogger("conduit").setLevel(logging.DEBUG)
             logger.debug("Verbose logging enabled")
 
+        if ctx.params.get("version"):
+            import importlib.metadata
+
+            try:
+                version_str = importlib.metadata.version("conduit-connect")
+                click.echo(f"Conduit version {version_str}")
+            except importlib.metadata.PackageNotFoundError:
+                click.echo("Conduit version unknown (package not installed)")
+            sys.exit(0)
+
         if ctx.params.get("init"):
             init_config()
             sys.exit(0)
@@ -82,7 +92,8 @@ class ConduitCLI(click.Group):
     help="Initialize user configuration files in standard locations",
 )
 @click.option("--json", is_flag=True, help="Output results in JSON format")
-def cli(verbose, init, json):
+@click.option("--version", is_flag=True, help="Show the version and exit")
+def cli(verbose, init, json, version):
     """Conduit: Enterprise Knowledge Integration Service.
 
     A unified CLI for Jira and Confluence integration.

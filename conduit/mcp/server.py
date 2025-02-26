@@ -68,7 +68,10 @@ def create_mcp_server() -> FastMCP:
 def register_tools(mcp_server: FastMCP) -> None:
     """Register all MCP tools with the server"""
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="list_atlassian_sites",
+        description="List all configured Jira and Confluence sites conduit is configured to use",
+    )
     async def list_config() -> list[types.TextContent]:
         """List all configured Jira and Confluence sites"""
         try:
@@ -106,7 +109,10 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in list_config: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="get_confluence_page",
+        description="Get Confluence page content by title within a space, returning the content in markdown format",
+    )
     async def get_confluence_page(
         space_key: str, title: str, site_alias: Optional[str] = None
     ) -> list[types.TextContent]:
@@ -188,7 +194,10 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in get_confluence_page: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="search_jira_issues",
+        description="Search for Jira issues using JQL (Jira Query Language) syntax",
+    )
     async def search_jira_issues(
         query: str, site_alias: Optional[str] = None
     ) -> list[types.TextContent]:
@@ -211,7 +220,10 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in search_jira_issues: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="create_jira_issue",
+        description="Create a new Jira issue with specified project, summary, description and type",
+    )
     async def create_jira_issue(
         project: str,
         summary: str,
@@ -243,7 +255,10 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in create_jira_issue: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="update_jira_issue",
+        description="Update an existing Jira issue's summary and description fields",
+    )
     async def update_jira_issue(
         key: str,
         summary: str,
@@ -275,7 +290,10 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in update_jira_issue: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="update_jira_status",
+        description="Update a Jira issue's status (move it to a different workflow state)",
+    )
     async def update_jira_status(
         key: str,
         status: str,
@@ -303,7 +321,10 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in update_jira_status: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="get_jira_boards",
+        description="Get all Jira boards, optionally filtered by project key",
+    )
     async def get_jira_boards(
         project_key: Optional[str] = None,
         site_alias: Optional[str] = None,
@@ -345,7 +366,10 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in get_jira_boards: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="get_jira_sprints",
+        description="Get all sprints from a Jira board, optionally filtered by state (active, future, closed)",
+    )
     async def get_jira_sprints(
         board_id: int,
         state: Optional[str] = None,
@@ -391,7 +415,10 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in get_jira_sprints: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="add_issues_to_jira_sprint",
+        description="Add one or more Jira issues to a specific sprint by ID",
+    )
     async def add_issues_to_jira_sprint(
         sprint_id: int,
         issue_keys: List[str],
@@ -428,34 +455,141 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.error(f"Error in add_issues_to_jira_sprint: {e}", exc_info=True)
             raise
 
-    @mcp_server.tool()
+    @mcp_server.tool(
+        name="get_jira_remote_links",
+        description="Get all remote links (URLs, etc.) associated with a specific Jira issue",
+    )
+    async def get_jira_remote_links(
+        key: str,
+        site_alias: Optional[str] = None,
+    ) -> list[types.TextContent]:
+        """Get all remote links associated with a Jira issue"""
+        try:
+            logger.debug(
+                f"Executing get_jira_remote_links tool for issue '{key}' with site {site_alias}"
+            )
+            # Get the Jira client from the registry
+            from conduit.platforms.registry import PlatformRegistry
+
+            client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+            client.connect()
+
+            # Get remote links using the client
+            links = client.get_remote_links(key)
+
+            # Format the response as markdown
+            markdown_response = f"# Remote Links for {key}\n\n"
+
+            if not links:
+                markdown_response += "No remote links found for this issue.\n"
+            else:
+                markdown_response += f"Found {len(links)} remote links:\n\n"
+                for link in links:
+                    relationship = link.get("relationship", "relates to")
+                    object_data = link.get("object", {})
+                    title = object_data.get("title", "No title")
+                    url = object_data.get("url", "No URL")
+
+                    markdown_response += (
+                        f"- **{title}**\n"
+                        f"  - Relationship: {relationship}\n"
+                        f"  - URL: {url}\n\n"
+                    )
+
+            logger.debug(
+                f"get_jira_remote_links found {len(links) if links else 0} remote links"
+            )
+            return [types.TextContent(type="text", text=markdown_response)]
+        except Exception as e:
+            logger.error(f"Error in get_jira_remote_links: {e}", exc_info=True)
+            raise
+
+    @mcp_server.tool(
+        name="list_all_confluence_pages",
+        description="List all pages in a Confluence space with pagination support, returning a formatted table of results",
+    )
     async def list_all_confluence_pages(
         space_key: str, batch_size: int = 100, site_alias: Optional[str] = None
     ) -> list[types.TextContent]:
         """List all pages in a Confluence space with pagination support"""
         try:
-            logger.debug(
-                f"Executing list_all_confluence_pages tool for space {space_key} with site {site_alias} and batch_size {batch_size}"
+            logger.info(
+                f"Listing all Confluence pages in space {space_key} with batch size {batch_size}"
             )
+
             # Get the Confluence client from the registry
             from conduit.platforms.registry import PlatformRegistry
 
             client = PlatformRegistry.get_platform("confluence", site_alias=site_alias)
             client.connect()
 
-            # Get all pages using pagination
-            pages = client.get_all_pages_by_space(space_key, batch_size=batch_size)
-            logger.debug(f"list_all_confluence_pages found {len(pages)} pages")
+            # Get pages using the client's get_pages_by_space method
+            pages = client.get_pages_by_space(space_key, limit=batch_size)
 
-            # Format response as markdown
-            markdown_response = f"\nFound {len(pages)} pages in space {space_key}:\n"
-            for page in pages:
-                markdown_response += f"- {page.get('title')} (ID: {page.get('id')})\n"
+            # Format the response
+            result = f"# Pages in {space_key} space\n\n"
+            if pages:
+                result += "| Title | ID | URL |\n"
+                result += "|-------|----|---------|\n"
+                for page in pages:
+                    title = page.get("title", "Untitled")
+                    page_id = page.get("id", "Unknown")
+                    url = page.get("_links", {}).get("webui", "")
+                    result += f"| {title} | {page_id} | {url} |\n"
+            else:
+                result += "No pages found in this space."
 
-            return [types.TextContent(type="text", text=markdown_response)]
+            return [types.TextContent(type="text", text=result)]
         except Exception as e:
-            logger.error(f"Error in list_all_confluence_pages: {e}", exc_info=True)
-            raise
+            logger.error(f"Error listing Confluence pages: {e}", exc_info=True)
+            return [
+                types.TextContent(
+                    type="text", text=f"# Error listing Confluence pages\n\n{str(e)}"
+                )
+            ]
+
+    @mcp_server.tool(
+        name="create_confluence_page_from_markdown",
+        description="Create a new Confluence page from markdown content, automatically converting it to Confluence storage format",
+    )
+    async def create_confluence_page(
+        space: str,
+        title: str,
+        content: str,
+        parent_id: Optional[str] = None,
+        site_alias: Optional[str] = None,
+    ) -> list[types.TextContent]:
+        """Create a new Confluence page with markdown content"""
+        try:
+            logger.info(f"Creating Confluence page in space {space} with title {title}")
+
+            # Use the existing service to create the page
+            page = await ConfluenceService.create_page_from_markdown(
+                space_key=space,
+                title=title,
+                content=content,
+                parent_id=parent_id,
+                site_alias=site_alias,
+            )
+
+            # Format the response
+            result = f"# Page created successfully\n\n"
+            result += f"- **Title**: {title}\n"
+            result += f"- **Space**: {space}\n"
+            result += f"- **ID**: {page['id']}\n"
+            result += f"- **URL**: {page['url']}\n"
+
+            if parent_id:
+                result += f"- **Parent ID**: {parent_id}\n"
+
+            return [types.TextContent(type="text", text=result)]
+        except Exception as e:
+            logger.error(f"Error creating Confluence page: {e}", exc_info=True)
+            return [
+                types.TextContent(
+                    type="text", text=f"# Error creating Confluence page\n\n{str(e)}"
+                )
+            ]
 
 
 # Create a server instance that can be imported by the MCP CLI

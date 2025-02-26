@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 from atlassian import Confluence
 
 from conduit.core.config import load_config
@@ -6,19 +6,33 @@ from conduit.core.logger import logger
 from conduit.core.exceptions import ConfigurationError, PlatformError
 from conduit.platforms.base import Platform
 from conduit.platforms.confluence.content import ConfluenceContentCleaner
+from conduit.platforms.confluence.config import ConfluenceConfig
 
 
 class ConfluenceClient(Platform):
     """Client for interacting with Confluence."""
 
-    def __init__(self, site_alias: Optional[str] = None):
+    def __init__(
+        self,
+        config_or_site_alias: Optional[Union[ConfluenceConfig, str]] = None,
+        site_alias: Optional[str] = None,
+    ):
         try:
-            self.config = load_config().confluence
-            self.site_config = self.config.get_site_config(site_alias)
+            # Handle the case where the first parameter is a ConfluenceConfig
+            if isinstance(config_or_site_alias, ConfluenceConfig):
+                self.config = config_or_site_alias
+                self.site_config = self.config.get_site_config(site_alias)
+                actual_site_alias = site_alias
+            # Handle the case where the first parameter is a site_alias string or None
+            else:
+                actual_site_alias = config_or_site_alias
+                self.config = load_config().confluence
+                self.site_config = self.config.get_site_config(actual_site_alias)
+
             self.confluence = None
             self.content_cleaner = ConfluenceContentCleaner()
             logger.info(
-                f"Initialized Confluence client for site: {site_alias or 'default'}"
+                f"Initialized Confluence client for site: {actual_site_alias or 'default'}"
             )
         except (FileNotFoundError, ConfigurationError) as e:
             logger.error(f"Failed to initialize Confluence client: {e}")
@@ -295,4 +309,74 @@ class ConfluenceClient(Platform):
                 logger.error(f"Response body: {e.response.text}")
             raise PlatformError(
                 f"Failed to get page '{title}' in space {space_key}: {e}"
+            )
+
+    async def list_pages(self, space_key: str) -> List[Dict[str, Any]]:
+        """
+        Asynchronously get pages in a given space.
+
+        Args:
+            space_key: The key of the space to get pages from
+
+        Returns:
+            List of pages with their details
+
+        Raises:
+            PlatformError: If the operation fails
+        """
+        self.connect()
+        return self.get_pages_by_space(space_key)
+
+    async def create_page(
+        self,
+        space_key: str,
+        title: str,
+        body: str,
+        parent_id: Optional[str] = None,
+        representation: str = "storage",
+    ) -> str:
+        """
+        Create a new page in Confluence.
+
+        Args:
+            space_key: The key of the space to create the page in
+            title: The title of the page
+            body: The content of the page in Confluence storage format
+            parent_id: Optional ID of the parent page
+            representation: Content representation format (default: "storage")
+
+        Returns:
+            The ID of the created page
+
+        Raises:
+            PlatformError: If the operation fails
+        """
+        if not self.confluence:
+            self.connect()
+
+        try:
+            logger.info(f"Creating page '{title}' in space: {space_key}")
+
+            # Create the page
+            page = self.confluence.create_page(
+                space=space_key,
+                title=title,
+                body=body,
+                parent_id=parent_id,
+                representation=representation,
+            )
+
+            page_id = page.get("id")
+            logger.info(f"Successfully created page: {page_id} - {title}")
+            logger.debug(f"Page details: {page}")
+
+            return page_id
+
+        except Exception as e:
+            logger.error(f"Failed to create page '{title}' in space {space_key}: {e}")
+            if hasattr(e, "response"):
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            raise PlatformError(
+                f"Failed to create page '{title}' in space {space_key}: {e}"
             )

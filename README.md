@@ -66,6 +66,9 @@ By bridging the gaps between your development tools and making them AI-accessibl
   - View child pages and hierarchies
   - Support for content cleaning and formatting
   - Rich text processing for AI consumption
+  - Create new pages with markdown content
+  - Automatic markdown to Confluence storage format conversion
+  - Support for parent-child page relationships
 
 - **Configuration & Usability**
 
@@ -600,6 +603,32 @@ content = confluence.get_space_content(
     expand="body.storage",
     format="clean"
 )
+
+# Create a new page with markdown content
+from conduit.core.services import ConfluenceService
+
+# Create the page using markdown content
+page = await ConfluenceService.create_page_from_markdown(
+    space_key="SPACE",
+    title="New Page Title",
+    content="# Markdown Content\n\nThis is a page with **markdown** content",
+    parent_id=None,  # Optional parent page ID
+    site_alias=None  # Optional site alias
+)
+
+# The returned page object contains:
+# - id: The ID of the created page
+# - title: The title of the page
+# - space_key: The space key
+# - url: Direct URL to the created page
+
+# Conduit uses the md2cf library to convert markdown to Confluence storage format
+# This supports standard markdown syntax including:
+# - Headings, paragraphs, and text formatting
+# - Lists (ordered and unordered)
+# - Tables with formatting
+# - Code blocks with syntax highlighting
+# - Links and images
 ```
 
 The cleaned content format (`format="clean"`) provides:
@@ -633,6 +662,10 @@ Conduit provides support for Anthropic's Model Context Protocol, allowing integr
 
 - Get page content by title within a space
 - List all pages in a space (with pagination support)
+- Create new pages with markdown content (with optional parent page)
+  - Automatically converts markdown to Confluence storage format
+  - Supports standard markdown syntax including headings, lists, tables, and code blocks
+  - Returns the created page URL for easy access
 
 **Jira Operations**
 
@@ -647,10 +680,9 @@ Conduit provides support for Anthropic's Model Context Protocol, allowing integr
 #### Current MCP Limitations
 
 - Limited to core read/write operations listed above
-- Additional Confluence operations (like space content, child pages) only available via CLI
-- Advanced Jira features (comments, transitions, remote links) only available via CLI
+- Additional Confluence operations (like space content, child pages) only available via CLI, though creating pages from markdown is now fully supported
+- Advanced Jira features (comments, transitions) only available via CLI
 - Configuration changes must be done via CLI
-- Content formatting and cleanup features limited to CLI
 
 #### Development and Testing with MCP Inspector
 
