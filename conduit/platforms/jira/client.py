@@ -203,6 +203,8 @@ class JiraClient(Platform, IssueManager):
             raise PlatformError("Not connected to Jira")
         try:
             remote_links = self.jira.get_issue_remote_links(key)
+            for link in remote_links:
+                value = link["non_existent_key"]
             return remote_links
         except Exception as e:
             raise PlatformError(f"Failed to get remote links for issue {key}: {e}")
