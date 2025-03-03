@@ -11,6 +11,7 @@ from urllib.parse import unquote
 import asyncio
 import anyio
 import click
+import datetime
 
 from conduit.core.services import ConfigService, ConfluenceService
 from conduit.core.config import load_config
@@ -590,6 +591,159 @@ def register_tools(mcp_server: FastMCP) -> None:
             return [
                 types.TextContent(
                     type="text", text=f"# Error creating Confluence page\n\n{str(e)}"
+                )
+            ]
+            
+    @mcp_server.tool(
+        name="get_project_overview",
+        description="Get a unified view of project information from both Jira and Confluence",
+    )
+    async def get_project_overview(
+        project_key: str,
+        space_key: str,
+        site_alias: Optional[Union[str, None]] = None,
+    ) -> list[types.TextContent]:
+        """Get a unified view of project information from both Jira and Confluence"""
+        try:
+            logger.info(
+                f"Executing get_project_overview for project {project_key} and space {space_key} with site {site_alias}"
+            )
+            
+            # Get the Jira and Confluence clients from the registry
+            from conduit.platforms.registry import PlatformRegistry
+
+            jira_client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+            jira_client.connect()
+            
+            confluence_client = PlatformRegistry.get_platform("confluence", site_alias=site_alias)
+            confluence_client.connect()
+            
+            # Initialize the response structure
+            overview = {
+                "project_key": project_key,
+                "space_key": space_key,
+                "jira": {
+                    "boards": [],
+                    "active_sprints": [],
+                    "issue_counts": {
+                        "to_do": 0,
+                        "in_progress": 0,
+                        "done": 0,
+                        "total": 0
+                    }
+                },
+                "confluence": {
+                    "pages": []
+                }
+            }
+            
+            # Get Jira boards for the project
+            boards = jira_client.get_boards(project_key)
+            overview["jira"]["boards"] = boards
+            
+            # Get active sprints for each board
+            active_sprints = []
+            for board in boards:
+                board_id = board.get("id")
+                if board_id:
+                    sprints = jira_client.get_sprints(board_id, "active")
+                    active_sprints.extend(sprints)
+            overview["jira"]["active_sprints"] = active_sprints
+            
+            # Get issue counts by status
+            # To Do issues
+            to_do_query = f'project = "{project_key}" AND status = "To Do"'
+            to_do_issues = jira_client.search(to_do_query)
+            overview["jira"]["issue_counts"]["to_do"] = len(to_do_issues)
+            
+            # In Progress issues
+            in_progress_query = f'project = "{project_key}" AND status = "In Progress"'
+            in_progress_issues = jira_client.search(in_progress_query)
+            overview["jira"]["issue_counts"]["in_progress"] = len(in_progress_issues)
+            
+            # Done issues
+            done_query = f'project = "{project_key}" AND status = "Done"'
+            done_issues = jira_client.search(done_query)
+            overview["jira"]["issue_counts"]["done"] = len(done_issues)
+            
+            # Total issues
+            total_query = f'project = "{project_key}"'
+            total_issues = jira_client.search(total_query)
+            overview["jira"]["issue_counts"]["total"] = len(total_issues)
+            
+            # Get Confluence pages
+            pages = confluence_client.get_pages_by_space(space_key)
+            overview["confluence"]["pages"] = pages
+            
+            # Format the response as markdown
+            markdown_response = f"# Project Overview: {project_key} / {space_key}\n\n"
+            
+            # Jira Boards section
+            markdown_response += "## Jira Boards\n\n"
+            if not boards:
+                markdown_response += "No boards found for this project.\n\n"
+            else:
+                markdown_response += f"Found {len(boards)} boards:\n\n"
+                for board in boards:
+                    markdown_response += (
+                        f"- **{board.get('name', 'Unnamed Board')}**\n"
+                        f"  - ID: {board.get('id')}\n"
+                        f"  - Type: {board.get('type', 'Unknown')}\n"
+                    )
+                markdown_response += "\n"
+            
+            # Active Sprints section
+            markdown_response += "## Active Sprints\n\n"
+            if not active_sprints:
+                markdown_response += "No active sprints found.\n\n"
+            else:
+                markdown_response += f"Found {len(active_sprints)} active sprints:\n\n"
+                for sprint in active_sprints:
+                    markdown_response += (
+                        f"- **{sprint.get('name', 'Unnamed Sprint')}**\n"
+                        f"  - ID: {sprint.get('id')}\n"
+                        f"  - Start Date: {sprint.get('startDate', 'Not set')}\n"
+                        f"  - End Date: {sprint.get('endDate', 'Not set')}\n"
+                    )
+                markdown_response += "\n"
+            
+            # Issue Counts section
+            markdown_response += "## Issue Counts\n\n"
+            markdown_response += "| Status | Count |\n"
+            markdown_response += "|--------|-------|\n"
+            markdown_response += f"| To Do | {overview['jira']['issue_counts']['to_do']} |\n"
+            markdown_response += f"| In Progress | {overview['jira']['issue_counts']['in_progress']} |\n"
+            markdown_response += f"| Done | {overview['jira']['issue_counts']['done']} |\n"
+            markdown_response += f"| **Total** | **{overview['jira']['issue_counts']['total']}** |\n\n"
+            
+            # Confluence Pages section
+            markdown_response += "## Confluence Pages\n\n"
+            if not pages:
+                markdown_response += "No pages found in this space.\n"
+            else:
+                markdown_response += f"Found {len(pages)} pages:\n\n"
+                markdown_response += "| Title | ID | Last Updated |\n"
+                markdown_response += "|-------|----|--------------|\n"
+                for page in pages[:10]:  # Limit to 10 pages for readability
+                    title = page.get("title", "Untitled")
+                    page_id = page.get("id", "Unknown")
+                    last_updated = page.get("version", {}).get("when", "Unknown")
+                    markdown_response += f"| {title} | {page_id} | {last_updated} |\n"
+                
+                if len(pages) > 10:
+                    markdown_response += f"\n*...and {len(pages) - 10} more pages*\n"
+            
+            # Add a simple cache hint
+            markdown_response += "\n\n*Data retrieved at: " + \
+                                 f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
+            
+            logger.debug(f"get_project_overview completed for {project_key}/{space_key}")
+            return [types.TextContent(type="text", text=markdown_response)]
+        except Exception as e:
+            logger.error(f"Error in get_project_overview: {e}", exc_info=True)
+            return [
+                types.TextContent(
+                    type="text", text=f"# Error retrieving project overview\n\n{str(e)}"
                 )
             ]
 
