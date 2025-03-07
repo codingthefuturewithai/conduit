@@ -22,17 +22,20 @@ class ConfluenceClient(Platform):
             if isinstance(config_or_site_alias, ConfluenceConfig):
                 self.config = config_or_site_alias
                 self.site_config = self.config.get_site_config(site_alias)
-                actual_site_alias = site_alias
+                self.site_alias = site_alias
             # Handle the case where the first parameter is a site_alias string or None
             else:
-                actual_site_alias = config_or_site_alias
                 self.config = load_config().confluence
-                self.site_config = self.config.get_site_config(actual_site_alias)
+                # If site_alias is provided as kwarg, use that, otherwise use first param
+                self.site_alias = (
+                    site_alias if site_alias is not None else config_or_site_alias
+                )
+                self.site_config = self.config.get_site_config(self.site_alias)
 
             self.confluence = None
             self.content_cleaner = ConfluenceContentCleaner()
             logger.info(
-                f"Initialized Confluence client for site: {actual_site_alias or 'default'}"
+                f"Initialized Confluence client for site: {self.site_alias or 'default'}"
             )
         except (FileNotFoundError, ConfigurationError) as e:
             logger.error(f"Failed to initialize Confluence client: {e}")
