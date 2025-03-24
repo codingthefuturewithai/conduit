@@ -337,7 +337,7 @@ class ConfluenceClient(Platform):
         body: str,
         parent_id: Optional[str] = None,
         representation: str = "storage",
-    ) -> str:
+    ) -> Dict[str, Any]:
         """
         Create a new page in Confluence.
 
@@ -349,7 +349,7 @@ class ConfluenceClient(Platform):
             representation: Content representation format (default: "storage")
 
         Returns:
-            The ID of the created page
+            The full page object containing id, title, version, etc.
 
         Raises:
             PlatformError: If the operation fails
@@ -369,11 +369,10 @@ class ConfluenceClient(Platform):
                 representation=representation,
             )
 
-            page_id = page.get("id")
-            logger.info(f"Successfully created page: {page_id} - {title}")
+            logger.info(f"Successfully created page: {page.get('id')} - {title}")
             logger.debug(f"Page details: {page}")
 
-            return page_id
+            return page
 
         except Exception as e:
             logger.error(f"Failed to create page '{title}' in space {space_key}: {e}")

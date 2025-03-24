@@ -15,6 +15,7 @@ import datetime
 
 from conduit.core.services import ConfigService, ConfluenceService
 from conduit.core.config import load_config
+from conduit.platforms.registry import PlatformRegistry
 
 # Configure logging to write to stderr instead of a file
 logging.basicConfig(
@@ -644,6 +645,7 @@ def register_tools(mcp_server: FastMCP) -> None:
             result += f"- **Title**: {title}\n"
             result += f"- **Space**: {space}\n"
             result += f"- **ID**: {page['id']}\n"
+            result += f"- **Version**: {page['version']}\n"  # Access version directly from the service response
             result += f"- **URL**: {page['url']}\n"
 
             if parent_id:
@@ -820,6 +822,102 @@ def register_tools(mcp_server: FastMCP) -> None:
             return [
                 types.TextContent(
                     type="text", text=f"# Error retrieving project overview\n\n{str(e)}"
+                )
+            ]
+
+    @mcp_server.tool(
+        name="update_confluence_page",
+        description="Update an existing Confluence page with version conflict handling. "
+        "Supports marking updates as minor edits to avoid notification spam for small changes.",
+    )
+    async def update_confluence_page(
+        space_key: str,
+        title: str,
+        content: str,
+        expected_version: int,
+        site_alias: Optional[Union[str, None]] = None,
+        minor_edit: bool = False,  # Set to True for small changes like typo fixes or formatting adjustments
+    ) -> list[types.TextContent]:
+        """Update a Confluence page with version conflict detection.
+
+        Args:
+            space_key: The key of the space containing the page
+            title: The title of the page to update
+            content: New markdown content for the page
+            expected_version: The version number we expect the page to be at
+            site_alias: Optional site alias for multi-site configurations
+            minor_edit: Set to True for small changes (typos, formatting) to avoid notification spam.
+                       Set to False for substantial content changes that watchers should know about.
+        """
+        try:
+            logger.debug(
+                f"Executing update_confluence_page for '{title}' in space {space_key} with expected version {expected_version}"
+            )
+
+            try:
+                # Use the service to update the page
+                page = await ConfluenceService.update_page_from_markdown(
+                    space_key=space_key,
+                    title=title,
+                    content=content,
+                    expected_version=expected_version,
+                    site_alias=site_alias,
+                    minor_edit=minor_edit,
+                )
+
+                # Return success message with new version info
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=f"""# Page Updated Successfully
+
+- Title: {title}
+- Space: {space_key}
+- New Version: {page.get('response', {}).get('version', {}).get('number')}
+- Last Updated: {page.get('response', {}).get('version', {}).get('when')}
+- URL: {page.get('url')}
+
+The page has been updated successfully.""",
+                    )
+                ]
+
+            except ValueError as e:
+                if "Version mismatch" in str(e):
+                    # Get current page info for helpful error message
+                    client = PlatformRegistry.get_platform(
+                        "confluence", site_alias=site_alias
+                    )
+                    client.connect()
+                    current_page = client.get_page_by_title(space_key, title)
+
+                    return [
+                        types.TextContent(
+                            type="text",
+                            text=f"""# Version Conflict Detected
+
+The page has been modified since you last retrieved it.
+- Your version: {expected_version}
+- Current version: {current_page.get('version', {}).get('number')}
+- Last modified: {current_page.get('version', {}).get('when')}
+
+Please retrieve the latest version and merge your changes.
+
+To help with merging, here are the options:
+1. Get the latest version using `get_confluence_page` to see recent changes
+2. Modify your changes to incorporate any updates
+3. Try the update again with the new version number
+
+Would you like me to fetch the latest version for you?""",
+                        )
+                    ]
+                else:
+                    return [types.TextContent(type="text", text=f"# Error\n{str(e)}")]
+
+        except Exception as e:
+            logger.error(f"Error in update_confluence_page: {e}", exc_info=True)
+            return [
+                types.TextContent(
+                    type="text", text=f"# Error updating Confluence page\n\n{str(e)}"
                 )
             ]
 
