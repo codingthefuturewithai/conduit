@@ -5,6 +5,7 @@ from conduit.core.exceptions import ConfigurationError, PlatformError
 from conduit.platforms.jira.content import markdown_to_jira
 import logging
 from typing import Any, Dict, Optional, List
+import datetime
 
 from conduit.core.logger import logger
 
@@ -299,5 +300,107 @@ class JiraClient(Platform, IssueManager):
             raise
         except Exception as e:
             error_msg = f"Failed to add issues {issue_keys} to sprint {sprint_id}"
+            logger.error(f"{error_msg}: {e}")
+            raise PlatformError(f"{error_msg}: {e}")
+
+    def create_sprint(
+        self,
+        name: str,
+        board_id: int,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        goal: str = "",
+    ) -> Dict[str, Any]:
+        """Create a new sprint on a board.
+
+        Args:
+            name: The name of the sprint
+            board_id: The ID of the board to create the sprint on
+            start_date: Optional start date. Accepts either:
+                       - Simple date format (e.g., '2023-01-01')
+                       - Full ISO format (e.g., '2023-01-01T00:00:00.000+0000')
+            end_date: Optional end date. Same format as start_date.
+            goal: The sprint goal
+
+        Returns:
+            Dict containing the created sprint information
+
+        Raises:
+            PlatformError: If not connected to Jira or if the API request fails
+        """
+        if not self.jira:
+            raise PlatformError("Not connected to Jira")
+        try:
+            logger.debug(
+                f"Creating sprint '{name}' on board {board_id} with goal '{goal}'"
+            )
+
+            # Validate board exists
+            try:
+                self.jira.get_agile_board(board_id)
+            except Exception as e:
+                raise PlatformError(
+                    f"Board with ID {board_id} does not exist or is not accessible: {e}"
+                )
+
+            # Convert and validate dates if provided
+            if start_date or end_date:
+                # Both dates must be provided if one is
+                if not (start_date and end_date):
+                    raise PlatformError(
+                        "Both start_date and end_date must be provided if one is specified"
+                    )
+
+                try:
+                    # Function to convert date string to ISO format
+                    def convert_to_iso(date_str: str) -> str:
+                        try:
+                            # Try parsing as full ISO format first
+                            dt = datetime.datetime.fromisoformat(
+                                date_str.replace("Z", "+00:00")
+                            )
+                            return dt.strftime("%Y-%m-%dT%H:%M:%S.000%z")
+                        except ValueError:
+                            try:
+                                # Try parsing as simple date format (YYYY-MM-DD)
+                                dt = datetime.datetime.strptime(date_str, "%Y-%m-%d")
+                                # Convert to UTC midnight
+                                return dt.strftime("%Y-%m-%dT00:00:00.000+0000")
+                            except ValueError as e:
+                                raise PlatformError(
+                                    f"Invalid date format. Use either 'YYYY-MM-DD' or full ISO format: {e}"
+                                )
+
+                    iso_start = convert_to_iso(start_date)
+                    iso_end = convert_to_iso(end_date)
+
+                    # Validate date order
+                    start = datetime.datetime.fromisoformat(
+                        iso_start.replace("Z", "+00:00")
+                    )
+                    end = datetime.datetime.fromisoformat(
+                        iso_end.replace("Z", "+00:00")
+                    )
+                    if start >= end:
+                        raise PlatformError("Start date must be before end date")
+
+                    # Use converted dates
+                    start_date = iso_start
+                    end_date = iso_end
+
+                except ValueError as e:
+                    raise PlatformError(f"Invalid date format: {e}")
+
+            # Create the sprint using the Atlassian Python API
+            sprint = self.jira.create_sprint(name, board_id, start_date, end_date, goal)
+
+            logger.info(
+                f"Successfully created sprint '{name}' with ID {sprint.get('id')}"
+            )
+            return sprint
+        except PlatformError:
+            raise
+        except Exception as e:
+            error_msg = f"Failed to create sprint '{name}' on board {board_id}"
             logger.error(f"{error_msg}: {e}")
             raise PlatformError(f"{error_msg}: {e}")

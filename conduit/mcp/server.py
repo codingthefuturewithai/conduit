@@ -457,6 +457,70 @@ def register_tools(mcp_server: FastMCP) -> None:
             raise
 
     @mcp_server.tool(
+        name="create_jira_sprint",
+        description="Create a new sprint on a Jira board with a mandatory goal and optional start/end dates",
+    )
+    async def create_jira_sprint(
+        name: str,
+        board_id: int,
+        goal: str,
+        start_date: Optional[Union[str, None]] = None,
+        end_date: Optional[Union[str, None]] = None,
+        site_alias: Optional[Union[str, None]] = None,
+    ) -> list[types.TextContent]:
+        """Create a new sprint on a Jira board with a mandatory goal"""
+        try:
+            # Ensure board_id is an integer
+            board_id = int(board_id)
+
+            logger.debug(
+                f"Executing create_jira_sprint tool for board {board_id} with name '{name}', goal '{goal}' and site {site_alias}"
+            )
+            # Get the Jira client from the registry
+            from conduit.platforms.registry import PlatformRegistry
+
+            client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
+            client.connect()
+
+            # Create the sprint using the client - note the parameter order matches the client's create_sprint method
+            sprint = client.create_sprint(name, board_id, start_date, end_date, goal)
+
+            # Format the response as markdown
+            markdown_response = "# Sprint Created Successfully\n\n"
+            markdown_response += f"- **Name**: {sprint.get('name')}\n"
+            markdown_response += f"- **ID**: {sprint.get('id')}\n"
+            markdown_response += f"- **State**: {sprint.get('state')}\n"
+            markdown_response += f"- **Board ID**: {board_id}\n"
+            markdown_response += f"- **Goal**: {sprint.get('goal')}\n"
+
+            if start_date:
+                markdown_response += f"- **Start Date**: {sprint.get('startDate')}\n"
+            if end_date:
+                markdown_response += f"- **End Date**: {sprint.get('endDate')}\n"
+
+            logger.debug(
+                f"create_jira_sprint created sprint with ID {sprint.get('id')}"
+            )
+            return [types.TextContent(type="text", text=markdown_response)]
+        except Exception as e:
+            # Log the error with more details
+            logger.error(f"Error in create_jira_sprint: {e}", exc_info=True)
+            logger.error(
+                f"Parameters received - name: {name}, board_id: {board_id}, goal: {goal}, start_date: {start_date}, end_date: {end_date}, site_alias: {site_alias}"
+            )
+
+            # If it's a validation error, provide more helpful information
+            if "validation error" in str(e).lower():
+                return [
+                    types.TextContent(
+                        type="text",
+                        text=f"# Validation Error\n\nThere was an error validating the input parameters: {e}\n\nPlease ensure all required fields are filled out correctly. The board_id must be a valid integer.",
+                    )
+                ]
+
+            raise
+
+    @mcp_server.tool(
         name="get_jira_remote_links",
         description="Get all remote links (URLs, etc.) associated with a specific Jira issue",
     )
@@ -593,7 +657,7 @@ def register_tools(mcp_server: FastMCP) -> None:
                     type="text", text=f"# Error creating Confluence page\n\n{str(e)}"
                 )
             ]
-            
+
     @mcp_server.tool(
         name="get_project_overview",
         description="Get a unified view of project information from both Jira and Confluence",
@@ -608,16 +672,18 @@ def register_tools(mcp_server: FastMCP) -> None:
             logger.info(
                 f"Executing get_project_overview for project {project_key} and space {space_key} with site {site_alias}"
             )
-            
+
             # Get the Jira and Confluence clients from the registry
             from conduit.platforms.registry import PlatformRegistry
 
             jira_client = PlatformRegistry.get_platform("jira", site_alias=site_alias)
             jira_client.connect()
-            
-            confluence_client = PlatformRegistry.get_platform("confluence", site_alias=site_alias)
+
+            confluence_client = PlatformRegistry.get_platform(
+                "confluence", site_alias=site_alias
+            )
             confluence_client.connect()
-            
+
             # Initialize the response structure
             overview = {
                 "project_key": project_key,
@@ -629,18 +695,16 @@ def register_tools(mcp_server: FastMCP) -> None:
                         "to_do": 0,
                         "in_progress": 0,
                         "done": 0,
-                        "total": 0
-                    }
+                        "total": 0,
+                    },
                 },
-                "confluence": {
-                    "pages": []
-                }
+                "confluence": {"pages": []},
             }
-            
+
             # Get Jira boards for the project
             boards = jira_client.get_boards(project_key)
             overview["jira"]["boards"] = boards
-            
+
             # Get active sprints for each board
             active_sprints = []
             for board in boards:
@@ -649,35 +713,35 @@ def register_tools(mcp_server: FastMCP) -> None:
                     sprints = jira_client.get_sprints(board_id, "active")
                     active_sprints.extend(sprints)
             overview["jira"]["active_sprints"] = active_sprints
-            
+
             # Get issue counts by status
             # To Do issues
             to_do_query = f'project = "{project_key}" AND status = "To Do"'
             to_do_issues = jira_client.search(to_do_query)
             overview["jira"]["issue_counts"]["to_do"] = len(to_do_issues)
-            
+
             # In Progress issues
             in_progress_query = f'project = "{project_key}" AND status = "In Progress"'
             in_progress_issues = jira_client.search(in_progress_query)
             overview["jira"]["issue_counts"]["in_progress"] = len(in_progress_issues)
-            
+
             # Done issues
             done_query = f'project = "{project_key}" AND status = "Done"'
             done_issues = jira_client.search(done_query)
             overview["jira"]["issue_counts"]["done"] = len(done_issues)
-            
+
             # Total issues
             total_query = f'project = "{project_key}"'
             total_issues = jira_client.search(total_query)
             overview["jira"]["issue_counts"]["total"] = len(total_issues)
-            
+
             # Get Confluence pages
             pages = confluence_client.get_pages_by_space(space_key)
             overview["confluence"]["pages"] = pages
-            
+
             # Format the response as markdown
             markdown_response = f"# Project Overview: {project_key} / {space_key}\n\n"
-            
+
             # Jira Boards section
             markdown_response += "## Jira Boards\n\n"
             if not boards:
@@ -691,7 +755,7 @@ def register_tools(mcp_server: FastMCP) -> None:
                         f"  - Type: {board.get('type', 'Unknown')}\n"
                     )
                 markdown_response += "\n"
-            
+
             # Active Sprints section
             markdown_response += "## Active Sprints\n\n"
             if not active_sprints:
@@ -706,16 +770,24 @@ def register_tools(mcp_server: FastMCP) -> None:
                         f"  - End Date: {sprint.get('endDate', 'Not set')}\n"
                     )
                 markdown_response += "\n"
-            
+
             # Issue Counts section
             markdown_response += "## Issue Counts\n\n"
             markdown_response += "| Status | Count |\n"
             markdown_response += "|--------|-------|\n"
-            markdown_response += f"| To Do | {overview['jira']['issue_counts']['to_do']} |\n"
-            markdown_response += f"| In Progress | {overview['jira']['issue_counts']['in_progress']} |\n"
-            markdown_response += f"| Done | {overview['jira']['issue_counts']['done']} |\n"
-            markdown_response += f"| **Total** | **{overview['jira']['issue_counts']['total']}** |\n\n"
-            
+            markdown_response += (
+                f"| To Do | {overview['jira']['issue_counts']['to_do']} |\n"
+            )
+            markdown_response += (
+                f"| In Progress | {overview['jira']['issue_counts']['in_progress']} |\n"
+            )
+            markdown_response += (
+                f"| Done | {overview['jira']['issue_counts']['done']} |\n"
+            )
+            markdown_response += (
+                f"| **Total** | **{overview['jira']['issue_counts']['total']}** |\n\n"
+            )
+
             # Confluence Pages section
             markdown_response += "## Confluence Pages\n\n"
             if not pages:
@@ -729,15 +801,19 @@ def register_tools(mcp_server: FastMCP) -> None:
                     page_id = page.get("id", "Unknown")
                     last_updated = page.get("version", {}).get("when", "Unknown")
                     markdown_response += f"| {title} | {page_id} | {last_updated} |\n"
-                
+
                 if len(pages) > 10:
                     markdown_response += f"\n*...and {len(pages) - 10} more pages*\n"
-            
+
             # Add a simple cache hint
-            markdown_response += "\n\n*Data retrieved at: " + \
-                                 f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
-            
-            logger.debug(f"get_project_overview completed for {project_key}/{space_key}")
+            markdown_response += (
+                "\n\n*Data retrieved at: "
+                + f"{datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')}*"
+            )
+
+            logger.debug(
+                f"get_project_overview completed for {project_key}/{space_key}"
+            )
             return [types.TextContent(type="text", text=markdown_response)]
         except Exception as e:
             logger.error(f"Error in get_project_overview: {e}", exc_info=True)
