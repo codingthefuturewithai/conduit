@@ -116,7 +116,7 @@ def register_tools(mcp_server: FastMCP) -> None:
         description="Get Confluence page content by title within a space, returning the content in markdown format",
     )
     async def get_confluence_page(
-        space_key: str, title: str, site_alias: Optional[Union[str, None]] = None
+        space_key: str, title: str, site_alias: str = None
     ) -> list[types.TextContent]:
         """Get Confluence page content by title within a space"""
         try:
@@ -201,7 +201,7 @@ def register_tools(mcp_server: FastMCP) -> None:
         description="Search for Jira issues using JQL (Jira Query Language) syntax",
     )
     async def search_jira_issues(
-        query: str, site_alias: Optional[Union[str, None]] = None
+        query: str, site_alias: str = None
     ) -> list[types.TextContent]:
         """Search Jira issues using JQL syntax"""
         try:
@@ -231,7 +231,7 @@ def register_tools(mcp_server: FastMCP) -> None:
         summary: str,
         description: str,
         issue_type: str = "Task",
-        site_alias: Optional[Union[str, None]] = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Create a new Jira issue"""
         try:
@@ -265,7 +265,7 @@ def register_tools(mcp_server: FastMCP) -> None:
         key: str,
         summary: str,
         description: str,
-        site_alias: Optional[Union[str, None]] = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Update an existing Jira issue"""
         try:
@@ -299,7 +299,7 @@ def register_tools(mcp_server: FastMCP) -> None:
     async def update_jira_status(
         key: str,
         status: str,
-        site_alias: Optional[Union[str, None]] = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Update a Jira issue's status"""
         try:
@@ -328,8 +328,8 @@ def register_tools(mcp_server: FastMCP) -> None:
         description="Get all Jira boards, optionally filtered by project key",
     )
     async def get_jira_boards(
-        project_key: Optional[Union[str, None]] = None,
-        site_alias: Optional[Union[str, None]] = None,
+        project_key: str = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Get all Jira boards, optionally filtered by project"""
         try:
@@ -374,8 +374,8 @@ def register_tools(mcp_server: FastMCP) -> None:
     )
     async def get_jira_sprints(
         board_id: int,
-        state: Optional[Union[str, None]] = None,
-        site_alias: Optional[Union[str, None]] = None,
+        state: str = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Get all sprints from a Jira board, optionally filtered by state"""
         try:
@@ -424,7 +424,7 @@ def register_tools(mcp_server: FastMCP) -> None:
     async def add_issues_to_jira_sprint(
         sprint_id: int,
         issue_keys: List[str],
-        site_alias: Optional[Union[str, None]] = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Add one or more Jira issues to a sprint"""
         try:
@@ -465,9 +465,9 @@ def register_tools(mcp_server: FastMCP) -> None:
         name: str,
         board_id: int,
         goal: str,
-        start_date: Optional[Union[str, None]] = None,
-        end_date: Optional[Union[str, None]] = None,
-        site_alias: Optional[Union[str, None]] = None,
+        start_date: str = None,
+        end_date: str = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Create a new sprint on a Jira board with a mandatory goal"""
         try:
@@ -527,7 +527,7 @@ def register_tools(mcp_server: FastMCP) -> None:
     )
     async def get_jira_remote_links(
         key: str,
-        site_alias: Optional[Union[str, None]] = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Get all remote links associated with a Jira issue"""
         try:
@@ -577,7 +577,7 @@ def register_tools(mcp_server: FastMCP) -> None:
     async def list_all_confluence_pages(
         space_key: str,
         batch_size: int = 100,
-        site_alias: Optional[Union[str, None]] = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """List all pages in a Confluence space with pagination support"""
         try:
@@ -624,8 +624,8 @@ def register_tools(mcp_server: FastMCP) -> None:
         space: str,
         title: str,
         content: str,
-        parent_id: Optional[Union[str, int]] = None,
-        site_alias: Optional[Union[str, None]] = None,
+        parent_id: str = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Create a new Confluence page with markdown content"""
         try:
@@ -667,7 +667,7 @@ def register_tools(mcp_server: FastMCP) -> None:
     async def get_project_overview(
         project_key: str,
         space_key: str,
-        site_alias: Optional[Union[str, None]] = None,
+        site_alias: str = None,
     ) -> list[types.TextContent]:
         """Get a unified view of project information from both Jira and Confluence"""
         try:
@@ -835,7 +835,7 @@ def register_tools(mcp_server: FastMCP) -> None:
         title: str,
         content: str,
         expected_version: int,
-        site_alias: Optional[Union[str, None]] = None,
+        site_alias: str = None,
         minor_edit: bool = False,  # Set to True for small changes like typo fixes or formatting adjustments
     ) -> list[types.TextContent]:
         """Update a Confluence page with version conflict detection.
