@@ -1,19 +1,15 @@
 """MCP server implementation for Conduit"""
 
-from typing import Dict, List, Optional, Union
-from mcp.server.fastmcp import FastMCP, Context
-from mcp.server.stdio import stdio_server
+from typing import Dict, List, Any
+from mcp.server.fastmcp import FastMCP
 import mcp.types as types
 import logging
-import json
 import sys
-from urllib.parse import unquote
 import asyncio
-import anyio
 import click
 import datetime
 
-from conduit.core.services import ConfigService, ConfluenceService
+from conduit.core.services import ConfluenceService
 from conduit.core.config import load_config
 from conduit.platforms.registry import PlatformRegistry
 
@@ -571,52 +567,6 @@ def register_tools(mcp_server: FastMCP) -> None:
             raise
 
     @mcp_server.tool(
-        name="list_all_confluence_pages",
-        description="List all pages in a Confluence space with pagination support, returning a formatted table of results",
-    )
-    async def list_all_confluence_pages(
-        space_key: str,
-        batch_size: int = 100,
-        site_alias: str = None,
-    ) -> list[types.TextContent]:
-        """List all pages in a Confluence space with pagination support"""
-        try:
-            logger.info(
-                f"Listing all Confluence pages in space {space_key} with batch size {batch_size}"
-            )
-
-            # Get the Confluence client from the registry
-            from conduit.platforms.registry import PlatformRegistry
-
-            client = PlatformRegistry.get_platform("confluence", site_alias=site_alias)
-            client.connect()
-
-            # Get pages using the client's get_pages_by_space method
-            pages = client.get_pages_by_space(space_key, limit=batch_size)
-
-            # Format the response
-            result = f"# Pages in {space_key} space\n\n"
-            if pages:
-                result += "| Title | ID | URL |\n"
-                result += "|-------|----|---------|\n"
-                for page in pages:
-                    title = page.get("title", "Untitled")
-                    page_id = page.get("id", "Unknown")
-                    url = page.get("_links", {}).get("webui", "")
-                    result += f"| {title} | {page_id} | {url} |\n"
-            else:
-                result += "No pages found in this space."
-
-            return [types.TextContent(type="text", text=result)]
-        except Exception as e:
-            logger.error(f"Error listing Confluence pages: {e}", exc_info=True)
-            return [
-                types.TextContent(
-                    type="text", text=f"# Error listing Confluence pages\n\n{str(e)}"
-                )
-            ]
-
-    @mcp_server.tool(
         name="create_confluence_page_from_markdown",
         description="Create a new Confluence page from markdown content, automatically converting it to Confluence storage format",
     )
@@ -641,7 +591,7 @@ def register_tools(mcp_server: FastMCP) -> None:
             )
 
             # Format the response
-            result = f"# Page created successfully\n\n"
+            result = "# Page created successfully\n\n"
             result += f"- **Title**: {title}\n"
             result += f"- **Space**: {space}\n"
             result += f"- **ID**: {page['id']}\n"
@@ -918,6 +868,104 @@ Would you like me to fetch the latest version for you?""",
             return [
                 types.TextContent(
                     type="text", text=f"# Error updating Confluence page\n\n{str(e)}"
+                )
+            ]
+
+    @mcp_server.tool(
+        name="retrieve_confluence_hierarchy",
+        description="Retrieve Confluence pages in a hierarchical tree structure. "
+        "Can start from space root or a specific parent page, with configurable depth and batch limits.",
+    )
+    async def retrieve_confluence_hierarchy(
+        space_key: str,
+        parent_page_id: str = None,
+        batch_size: int = 100,
+        max_depth: int = None,
+        site_alias: str = None,
+    ) -> list[types.TextContent]:
+        """Retrieve Confluence pages in a hierarchical tree structure.
+
+        Args:
+            space_key: The Confluence space key (required)
+            parent_page_id: Optional page ID to start from; if not provided, starts from space root
+            batch_size: Maximum number of pages to retrieve (default: 100)
+            max_depth: Optional maximum depth to traverse
+            site_alias: Optional site alias for multi-site configurations
+        """
+        try:
+            logger.debug(
+                f"Executing retrieve_confluence_hierarchy for space {space_key}, "
+                f"parent: {parent_page_id or 'root'}, batch_size: {batch_size}, "
+                f"max_depth: {max_depth}, site: {site_alias}"
+            )
+
+            # Get the Confluence client from the registry
+            client = PlatformRegistry.get_platform("confluence", site_alias=site_alias)
+            client.connect()
+
+            # Get the hierarchical structure
+            hierarchy = client.get_page_hierarchy(
+                space_key=space_key,
+                parent_page_id=parent_page_id,
+                batch_size=batch_size,
+                max_depth=max_depth,
+            )
+
+            # Format the response as markdown with the tree structure
+            markdown_response = "# Confluence Page Hierarchy\n\n"
+            markdown_response += f"**Space**: {space_key}\n"
+            if parent_page_id:
+                markdown_response += f"**Starting from page ID**: {parent_page_id}\n"
+            else:
+                markdown_response += "**Starting from**: Space root\n"
+            markdown_response += (
+                f"**Total pages retrieved**: {hierarchy['total_pages']}\n"
+            )
+            markdown_response += f"**Batch size limit**: {batch_size}\n"
+            if max_depth:
+                markdown_response += f"**Max depth**: {max_depth}\n"
+            markdown_response += "\n## Page Tree\n\n"
+
+            def format_tree_node(node: Dict[str, Any], indent: int = 0) -> str:
+                """Format a node and its children as a tree structure."""
+                result = "  " * indent + f"- **{node['title']}**\n"
+                result += "  " * indent + f"  - ID: {node['id']}\n"
+                result += "  " * indent + f"  - Version: {node['version']}\n"
+                result += "  " * indent + f"  - Last Updated: {node['lastUpdated']}\n"
+                if node["url"]:
+                    result += "  " * indent + f"  - URL: {node['url']}\n"
+
+                # Format children
+                for child in node["children"]:
+                    result += format_tree_node(child, indent + 1)
+
+                return result
+
+            # Format the hierarchy
+            if not hierarchy["hierarchy"]:
+                markdown_response += "*No pages found*\n"
+            else:
+                for root_node in hierarchy["hierarchy"]:
+                    markdown_response += format_tree_node(root_node)
+
+            # Add note if batch size was reached
+            if hierarchy["total_pages"] >= batch_size:
+                markdown_response += (
+                    f"\n**Note**: Batch size limit of {batch_size} pages was reached. "
+                    "There may be additional pages not shown.\n"
+                )
+
+            logger.debug(
+                f"retrieve_confluence_hierarchy completed, retrieved {hierarchy['total_pages']} pages"
+            )
+            return [types.TextContent(type="text", text=markdown_response)]
+
+        except Exception as e:
+            logger.error(f"Error in retrieve_confluence_hierarchy: {e}", exc_info=True)
+            return [
+                types.TextContent(
+                    type="text",
+                    text=f"# Error retrieving Confluence hierarchy\n\n{str(e)}",
                 )
             ]
 

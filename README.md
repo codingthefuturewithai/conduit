@@ -61,9 +61,10 @@ By bridging the gaps between your development tools and making them AI-accessibl
 - **Confluence Integration**
 
   - Multi-site support with site aliases
-  - List pages in a space with pagination
+  - Hierarchical page retrieval with tree structure
   - Get page content with formatting options
-  - View child pages and hierarchies
+  - Retrieve pages from space root or specific parent
+  - Configurable depth and batch size limits
   - Support for content cleaning and formatting
   - Rich text processing for AI consumption
   - Create new pages with markdown content

@@ -382,3 +382,144 @@ class ConfluenceClient(Platform):
             raise PlatformError(
                 f"Failed to create page '{title}' in space {space_key}: {e}"
             )
+
+    def get_page_hierarchy(
+        self,
+        space_key: str,
+        parent_page_id: Optional[str] = None,
+        batch_size: int = 100,
+        max_depth: Optional[int] = None,
+    ) -> Dict[str, Any]:
+        """
+        Get hierarchical structure of Confluence pages.
+
+        Args:
+            space_key: The key of the space to retrieve pages from
+            parent_page_id: Optional ID of parent page to start from (defaults to space root)
+            batch_size: Maximum number of pages to retrieve (default: 100)
+            max_depth: Maximum depth to traverse (None for unlimited)
+
+        Returns:
+            Dictionary containing hierarchical page structure with metadata
+
+        Raises:
+            PlatformError: If the operation fails
+        """
+        if not self.confluence:
+            raise PlatformError("Not connected to Confluence")
+
+        try:
+            logger.info(
+                f"Getting page hierarchy for space {space_key}, "
+                f"parent: {parent_page_id or 'root'}, batch_size: {batch_size}"
+            )
+
+            processed_count = 0
+
+            def build_page_node(page: Dict[str, Any]) -> Dict[str, Any]:
+                """Build a standardized page node for the hierarchy."""
+                return {
+                    "id": page.get("id"),
+                    "title": page.get("title"),
+                    "url": page.get("_links", {}).get("webui", ""),
+                    "version": page.get("version", {}).get("number"),
+                    "lastUpdated": page.get("version", {}).get("when"),
+                    "children": [],
+                }
+
+            def get_children_recursive(
+                parent_id: str, current_depth: int
+            ) -> List[Dict[str, Any]]:
+                """Recursively get children of a page."""
+                nonlocal processed_count
+
+                # Check if we've hit our limits
+                if processed_count >= batch_size:
+                    return []
+                if max_depth is not None and current_depth >= max_depth:
+                    return []
+
+                children = []
+                try:
+                    # Get child pages
+                    child_pages = self.get_child_pages(
+                        parent_id,
+                        limit=min(100, batch_size - processed_count),
+                        expand="version",
+                    )
+
+                    for child in child_pages:
+                        if processed_count >= batch_size:
+                            break
+
+                        node = build_page_node(child)
+                        processed_count += 1
+
+                        # Recursively get children
+                        node["children"] = get_children_recursive(
+                            child["id"], current_depth + 1
+                        )
+
+                        children.append(node)
+
+                except Exception as e:
+                    logger.warning(f"Failed to get children for page {parent_id}: {e}")
+
+                return children
+
+            # Build the hierarchy
+            result = {
+                "space_key": space_key,
+                "parent_page_id": parent_page_id,
+                "batch_size": batch_size,
+                "max_depth": max_depth,
+                "total_pages": 0,
+                "hierarchy": [],
+            }
+
+            if parent_page_id:
+                # Start from specific parent page
+                try:
+                    parent_page = self.confluence.get_page_by_id(
+                        parent_page_id, expand="version"
+                    )
+                    root_node = build_page_node(parent_page)
+                    processed_count += 1
+
+                    # Get children of the parent
+                    root_node["children"] = get_children_recursive(parent_page_id, 1)
+                    result["hierarchy"] = [root_node]
+
+                except Exception as e:
+                    logger.error(f"Failed to get parent page {parent_page_id}: {e}")
+                    raise PlatformError(f"Failed to get parent page: {e}")
+            else:
+                # Start from space root - get top-level pages
+                top_pages = self.get_pages_by_space(
+                    space_key, limit=min(100, batch_size), expand="version,ancestors"
+                )
+
+                # Filter for root pages (no ancestors)
+                root_pages = [p for p in top_pages if not p.get("ancestors", [])]
+
+                for page in root_pages:
+                    if processed_count >= batch_size:
+                        break
+
+                    node = build_page_node(page)
+                    processed_count += 1
+
+                    # Get children
+                    node["children"] = get_children_recursive(page["id"], 1)
+                    result["hierarchy"].append(node)
+
+            result["total_pages"] = processed_count
+            logger.info(f"Retrieved {processed_count} pages in hierarchical structure")
+
+            return result
+
+        except PlatformError:
+            raise
+        except Exception as e:
+            logger.error(f"Failed to get page hierarchy: {e}")
+            raise PlatformError(f"Failed to get page hierarchy: {e}")
