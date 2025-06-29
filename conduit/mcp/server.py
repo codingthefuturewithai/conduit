@@ -8,6 +8,7 @@ import sys
 import asyncio
 import click
 import datetime
+import importlib.metadata
 
 from conduit.core.services import ConfluenceService
 from conduit.core.config import load_config
@@ -975,15 +976,30 @@ server = create_mcp_server()
 
 
 @click.command()
-@click.option("--port", default=8000, help="Port to listen on for SSE")
+@click.option("--version", is_flag=True, help="Show the Conduit MCP server version and exit.")
 @click.option(
     "--transport",
     type=click.Choice(["stdio", "sse"]),
     default="stdio",
     help="Transport type",
 )
-def main(port: int, transport: str) -> int:
+def main(version: bool, transport: str):
     """Entry point for the MCP server"""
+    if version:
+        import importlib.metadata
+        try:
+            version_str = importlib.metadata.version("conduit-connect")
+            click.echo(f"Conduit MCP server version {version_str}")
+        except importlib.metadata.PackageNotFoundError:
+            click.echo("Conduit MCP server version unknown (package not installed)")
+        sys.exit(0)
+
+    # Imports below are intentionally placed here to avoid side effects
+    # when --version is passed (no server or logging should be initialized).
+    import asyncio
+    from conduit.core.logger import logger
+    from conduit.mcp import server
+
     try:
         if transport == "stdio":
             asyncio.run(server.run_stdio_async())

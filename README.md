@@ -806,3 +806,15 @@ mypy .
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
+
+## Checking Your Installed Version
+
+To check which version of Conduit you have installed, run:
+
+```bash
+uv pip show conduit-connect
+# or, if using pip:
+pip show conduit-connect
+```
+
+This will display the installed version and other package details.
