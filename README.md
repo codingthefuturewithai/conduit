@@ -511,7 +511,7 @@ conduit jira add-to-sprint SPRINT-456 --issues PROJ-123 PROJ-124 [--site site1]
 conduit confluence pages list SPACE --limit 10 [--site site1]
 ```
 
-2. List all pages in a space (with pagination):
+2. List all pages in a space (previously a flat list, now retrieves a hierarchy):
 
 ```bash
 conduit confluence pages list-all SPACE --batch-size 100 [--site site1]
@@ -540,6 +540,8 @@ conduit confluence pages content SPACE --format storage [--site site1]
 ```bash
 conduit confluence pages get SPACE "Page Title" --format clean [--site site1]
 ```
+
+7. Retrieve Confluence page hierarchy: Retrieve a hierarchical tree of Confluence pages for a space, starting from the space root or a specific parent page. The result shows parent-child relationships, not just a flat list. You can limit the number of pages and the depth of the tree.
 
 ### Python API
 
@@ -662,7 +664,8 @@ Conduit provides support for Anthropic's Model Context Protocol, allowing integr
 **Confluence Operations**
 
 - Get page content by title within a space
-- List all pages in a space (with pagination support)
+- List all pages in a space (previously a flat list, now retrieves a hierarchy)
+- Retrieve Confluence page hierarchy: Retrieve a hierarchical tree of Confluence pages for a space, starting from the space root or a specific parent page. The result shows parent-child relationships, not just a flat list. You can limit the number of pages and the depth of the tree.
 - Create new pages with markdown content (with optional parent page)
   - Automatically converts markdown to Confluence storage format
   - Supports standard markdown syntax including headings, lists, tables, and code blocks
@@ -818,3 +821,22 @@ pip show conduit-connect
 ```
 
 This will display the installed version and other package details.
+
+## Upgrading Conduit
+
+To upgrade Conduit to the latest version, use the same tool you used to install it:
+
+- If you used pip:
+  ```sh
+  pip install --upgrade conduit-connect
+  ```
+
+- If you used uv:
+  ```sh
+  uv pip install -U conduit-connect
+  ```
+
+- If you used pipx:
+  ```sh
+  pipx upgrade conduit-connect
+  ```
