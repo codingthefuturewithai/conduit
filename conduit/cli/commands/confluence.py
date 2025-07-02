@@ -1,8 +1,7 @@
 import click
-from typing import Optional
 
-from conduit.platforms.registry import PlatformRegistry
 from conduit.core.exceptions import PlatformError
+from conduit.platforms.registry import PlatformRegistry
 
 
 @click.group()

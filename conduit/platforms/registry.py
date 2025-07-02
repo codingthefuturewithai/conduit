@@ -1,7 +1,8 @@
-from typing import Dict, Type, Optional
+from typing import Dict, Optional, Type
+
 from conduit.platforms.base import Platform
-from conduit.platforms.jira.client import JiraClient
 from conduit.platforms.confluence.client import ConfluenceClient
+from conduit.platforms.jira.client import JiraClient
 
 
 class PlatformRegistry:

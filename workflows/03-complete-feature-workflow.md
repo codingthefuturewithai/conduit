@@ -8,6 +8,7 @@ This workflow describes how to complete a feature by committing changes, creatin
 - Code reviewed locally (linting, formatting)
 - All tests passing
 - Git configured with appropriate remotes
+- GitHub CLI installed and authenticated (`gh auth login`)
 
 ## Steps
 
@@ -67,40 +68,20 @@ Closes [ISSUE-KEY]
   --assignee @me
 ```
 
-### 4. Update JIRA Issue
-After PR is created, add PR link to JIRA:
+### 4. Update JIRA Issue to Done
+After PR is created and all tests pass:
 ```bash
 # Add PR link as a comment
-claude -p "Add a comment to JIRA issue [ISSUE-KEY] with the PR link: [PR_URL]"
+claude -p "Add a comment to JIRA issue [ISSUE-KEY] with the PR link: [PR_URL] using mcp__Conduit"
 
-# Or update the issue status if merging directly
-claude -p "Use mcp__Conduit__update_jira_status to update [ISSUE-KEY] to 'In Review' status"
-```
-
-### 5. Post-Merge Actions
-Once PR is approved and merged:
-```bash
-# Update JIRA to Done
+# Update the issue status to Done
 claude -p "Use mcp__Conduit__update_jira_status to update [ISSUE-KEY] to 'Done' status using site_alias:[SITE]"
-
-# Clean up local branch
-git checkout main
-git pull origin main
-git branch -d feature/[ISSUE-KEY]-[description]
 ```
 
-## Alternative: Direct Merge to Main
-**⚠️ Use only for small teams or personal projects**
+## Next Steps
+Your PR is now ready for human review. The review and merge process will be handled through GitHub's interface.
 
-```bash
-# After committing changes
-git checkout main
-git merge feature/[ISSUE-KEY]-[description]
-git push origin main
-
-# Then update JIRA
-claude -p "Update [ISSUE-KEY] to 'Done' status"
-```
+For post-merge actions, see workflow `04-post-merge-workflow.md`.
 
 ## Commit Message Templates
 

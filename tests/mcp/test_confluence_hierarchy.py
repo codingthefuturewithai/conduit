@@ -1,10 +1,11 @@
 """Tests for Confluence hierarchical page retrieval."""
 
-import pytest
 from unittest.mock import Mock, patch
 
-from conduit.platforms.confluence.client import ConfluenceClient
+import pytest
+
 from conduit.core.exceptions import PlatformError
+from conduit.platforms.confluence.client import ConfluenceClient
 
 
 class TestConfluenceHierarchy:

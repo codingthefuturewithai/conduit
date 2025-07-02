@@ -1,13 +1,13 @@
+import datetime
+from typing import Any, Dict, List, Optional
+
 from atlassian import Jira
-from conduit.platforms.base import Platform, IssueManager
+
 from conduit.core.config import load_config
 from conduit.core.exceptions import ConfigurationError, PlatformError
-from conduit.platforms.jira.content import markdown_to_jira
-import logging
-from typing import Any, Dict, Optional, List
-import datetime
-
 from conduit.core.logger import logger
+from conduit.platforms.base import IssueManager, Platform
+from conduit.platforms.jira.content import markdown_to_jira
 
 
 class JiraClient(Platform, IssueManager):

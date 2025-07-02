@@ -1,9 +1,10 @@
-import click
-from conduit.platforms.registry import PlatformRegistry
-from conduit.core.exceptions import PlatformError
 from pathlib import Path
-from conduit.core.content import ContentManager
+
+import click
+
 from conduit.core.config import load_config
+from conduit.core.content import ContentManager
+from conduit.platforms.registry import PlatformRegistry
 
 
 @click.group()

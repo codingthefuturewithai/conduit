@@ -1,7 +1,9 @@
 """Tests for the content management functionality."""
 
-import pytest
 from pathlib import Path
+
+import pytest
+
 from conduit.core.content import ContentManager
 
 
@@ -108,7 +110,7 @@ def test_read_content_nonexistent_file(content_manager):
 def test_content_dir_creation(tmp_path):
     """Test content directory is created if it doesn't exist."""
     content_dir = tmp_path / "nonexistent"
-    manager = ContentManager(content_dir)
+    ContentManager(content_dir)
     assert content_dir.exists()
     assert content_dir.is_dir()
 
@@ -167,7 +169,7 @@ def test_mark_content_as_failed_outside_directory(content_manager, tmp_path):
 def test_failed_content_directory_creation(tmp_path):
     """Test failed_content directory is created if it doesn't exist."""
     content_dir = tmp_path / "content"
-    manager = ContentManager(content_dir)
+    ContentManager(content_dir)
     failed_dir = content_dir / "failed_content"
     assert failed_dir.exists()
     assert failed_dir.is_dir()

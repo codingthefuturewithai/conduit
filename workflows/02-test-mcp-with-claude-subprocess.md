@@ -6,7 +6,10 @@ This workflow describes how to use Claude as a subprocess to test MCP server end
 ## Prerequisites
 - MCP server must be installed and available
 - Claude CLI must be installed
-- Target MCP tools must be configured
+- The MCP tool you're implementing/testing must be:
+  - Fully implemented in the codebase
+  - Registered with the MCP server (via `@mcp_server.tool` decorator)
+  - Installed in development mode (`pip install -e ".[dev]"`)
 
 ## Steps
 

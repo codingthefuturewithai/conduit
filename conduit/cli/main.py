@@ -1,23 +1,17 @@
-import click
 import functools
 import logging
 import sys
-import asyncio
-from pathlib import Path
-from typing import Optional
 
-from conduit.platforms.registry import PlatformRegistry
-from conduit.core.exceptions import PlatformError, ConfigurationError
-from conduit.cli.commands.jira import jira
+import click
+
 from conduit.cli.commands.confluence import confluence
-from conduit.core.config import (
-    create_default_config,
-    get_config_dir,
-    load_config,
-    SiteConfig,
-)
-from conduit.core.logger import logger
+from conduit.cli.commands.jira import jira
+from conduit.core.config import (create_default_config, get_config_dir,
+                                 load_config)
 from conduit.core.content import ContentManager
+from conduit.core.exceptions import ConfigurationError
+from conduit.core.logger import logger
+from conduit.platforms.registry import PlatformRegistry
 
 
 def handle_error(func):

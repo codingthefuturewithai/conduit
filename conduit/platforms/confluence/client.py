@@ -1,12 +1,13 @@
-from typing import Dict, List, Optional, Any, Union
+from typing import Any, Dict, List, Optional, Union
+
 from atlassian import Confluence
 
 from conduit.core.config import load_config
-from conduit.core.logger import logger
 from conduit.core.exceptions import ConfigurationError, PlatformError
+from conduit.core.logger import logger
 from conduit.platforms.base import Platform
-from conduit.platforms.confluence.content import ConfluenceContentCleaner
 from conduit.platforms.confluence.config import ConfluenceConfig
+from conduit.platforms.confluence.content import ConfluenceContentCleaner
 
 
 class ConfluenceClient(Platform):
@@ -523,3 +524,77 @@ class ConfluenceClient(Platform):
         except Exception as e:
             logger.error(f"Failed to get page hierarchy: {e}")
             raise PlatformError(f"Failed to get page hierarchy: {e}")
+
+    def attach_file(
+        self,
+        page_id: str,
+        file_path: str,
+        attachment_name: str,
+        content_type: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Attach a file to a Confluence page.
+
+        Args:
+            page_id: The ID of the page to attach the file to
+            file_path: Local path to the file to attach
+            attachment_name: Name for the attachment on Confluence
+            content_type: Optional MIME type for the file (auto-detected if not provided)
+
+        Returns:
+            Dictionary containing attachment metadata from the API response
+
+        Raises:
+            PlatformError: If the operation fails
+            FileNotFoundError: If the local file doesn't exist
+        """
+        if not self.confluence:
+            raise PlatformError("Not connected to Confluence")
+
+        import mimetypes
+        import os
+
+        # Validate file exists
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"Local file not found: {file_path}")
+
+        if not os.path.isfile(file_path):
+            raise ValueError(f"Path is not a file: {file_path}")
+
+        # Auto-detect content type if not provided
+        if not content_type:
+            content_type, _ = mimetypes.guess_type(file_path)
+            if not content_type:
+                content_type = "application/octet-stream"
+
+        try:
+            logger.info(
+                f"Attaching file '{attachment_name}' to page {page_id}, "
+                f"content-type: {content_type}"
+            )
+
+            # Use the atlassian-python-api's attach_file method
+            result = self.confluence.attach_file(
+                filename=file_path,
+                name=attachment_name,
+                page_id=page_id,
+                title=None,  # Not needed when page_id is provided
+                space=None,  # Not needed when page_id is provided
+                comment=None,
+            )
+
+            logger.info(f"Successfully attached file: {attachment_name}")
+            logger.debug(f"Attachment response: {result}")
+
+            return result
+
+        except Exception as e:
+            logger.error(
+                f"Failed to attach file '{attachment_name}' to page {page_id}: {e}"
+            )
+            if hasattr(e, "response"):
+                logger.error(f"Response status: {e.response.status_code}")
+                logger.error(f"Response body: {e.response.text}")
+            raise PlatformError(
+                f"Failed to attach file '{attachment_name}' to page {page_id}: {e}"
+            )

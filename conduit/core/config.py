@@ -1,10 +1,11 @@
-from pathlib import Path
-import yaml
-import shutil
-import os
 import importlib.resources as pkg_resources
-from pydantic import BaseModel
+import os
+import shutil
+from pathlib import Path
 from typing import Dict, Optional
+
+import yaml
+from pydantic import BaseModel
 
 from conduit.core.exceptions import ConfigurationError
 from conduit.core.logger import logger
@@ -25,7 +26,8 @@ class JiraConfig(BaseModel):
     sites: Dict[str, SiteConfig]
 
     class Config:
-        alias_generator = lambda string: string.replace("_", "-")
+        def alias_generator(string: str) -> str:
+            return string.replace("_", "-")
         populate_by_alias = True
 
     def get_site_config(self, site_alias: Optional[str] = None) -> SiteConfig:
@@ -43,7 +45,8 @@ class ConfluenceConfig(BaseModel):
     sites: Dict[str, SiteConfig]
 
     class Config:
-        alias_generator = lambda string: string.replace("_", "-")
+        def alias_generator(string: str) -> str:
+            return string.replace("_", "-")
         populate_by_alias = True
 
     def get_site_config(self, site_alias: Optional[str] = None) -> SiteConfig:

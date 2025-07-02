@@ -1,0 +1,1 @@
+# Confluence platform tests

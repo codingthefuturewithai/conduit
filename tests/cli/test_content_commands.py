@@ -1,10 +1,13 @@
 """Tests for content-related CLI commands."""
 
+from pathlib import Path
+
 import pytest
 from click.testing import CliRunner
-from pathlib import Path
+
 from conduit.cli.main import cli
-from conduit.core.config import Config, JiraConfig, ConfluenceConfig, SiteConfig
+from conduit.core.config import (Config, ConfluenceConfig, JiraConfig,
+                                 SiteConfig)
 
 
 @pytest.fixture

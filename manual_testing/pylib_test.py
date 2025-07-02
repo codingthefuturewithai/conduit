@@ -1,6 +1,6 @@
-from conduit.platforms.jira import JiraClient
-from conduit.platforms.confluence import ConfluenceClient
 from conduit.core.exceptions import PlatformError
+from conduit.platforms.confluence import ConfluenceClient
+from conduit.platforms.jira import JiraClient
 
 try:
     # Initialize Jira client with optional site alias
@@ -10,7 +10,7 @@ try:
     # Get an issue
     try:
         issue = jira.get("ACT-50")  # Using a specific issue number
-        print(f"Successfully retrieved issue ACT-50")
+        print("Successfully retrieved issue ACT-50")
     except PlatformError as e:
         print(f"Failed to get issue: {e}")
 

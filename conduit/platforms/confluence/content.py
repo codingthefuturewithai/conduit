@@ -1,9 +1,9 @@
 """Content processing utilities for Confluence."""
 
 import re
-from typing import Optional
-from bs4 import BeautifulSoup, NavigableString
 import warnings
+
+from bs4 import BeautifulSoup, NavigableString
 
 # Suppress parser warnings
 warnings.filterwarnings("ignore", category=UserWarning, module="bs4")

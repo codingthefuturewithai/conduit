@@ -1,8 +1,8 @@
 from typing import Dict, List, Optional
 
-from conduit.core.config import Config, load_config
+from conduit.core.config import load_config
+from conduit.core.logger import logger
 from conduit.platforms.confluence.client import ConfluenceClient
-from conduit.platforms.confluence.config import ConfluenceConfig
 
 
 class ConfigService:
@@ -51,15 +51,20 @@ class ConfluenceService:
         content: str,
         parent_id: Optional[str] = None,
         site_alias: Optional[str] = None,
+        attachments: Optional[List[Dict[str, str]]] = None,
     ) -> Dict:
         """Create a new Confluence page from markdown content
 
         Args:
             space_key: The key of the Confluence space
             title: The title of the page to create
-            content: Markdown content for the page
+            content: Markdown content for the page (or storage format if contains images)
             parent_id: Optional ID of the parent page
             site_alias: Optional site alias for multi-site configurations
+            attachments: Optional list of attachments to upload
+                Each attachment dict should have:
+                - local_path: Path to the file on local filesystem
+                - name_on_confluence: Name for the attachment on Confluence
 
         Returns:
             Dict containing the created page information
@@ -68,15 +73,24 @@ class ConfluenceService:
         client = cls._get_client(site_alias)
         confluence_config = client.config
         site_config = confluence_config.get_site_config(site_alias)
+        client.connect()  # Ensure we're connected
 
-        # Convert markdown to Confluence storage format using md2cf
-        from md2cf.confluence_renderer import ConfluenceRenderer
-        import mistune
+        # Check if content is already in storage format (contains ac:image tags)
+        is_storage_format = "<ac:image" in content or "<ri:attachment" in content
 
-        # Convert Markdown to Confluence Storage Format
-        renderer = ConfluenceRenderer()
-        markdown_parser = mistune.Markdown(renderer=renderer)
-        confluence_content = markdown_parser(content)
+        if is_storage_format:
+            # Content is already in storage format, use as-is
+            confluence_content = content
+            logger.info("Content is already in Confluence storage format")
+        else:
+            # Convert markdown to Confluence storage format using md2cf
+            import mistune
+            from md2cf.confluence_renderer import ConfluenceRenderer
+
+            # Convert Markdown to Confluence Storage Format
+            renderer = ConfluenceRenderer()
+            markdown_parser = mistune.Markdown(renderer=renderer)
+            confluence_content = markdown_parser(content)
 
         # Create the page using the client's API with storage representation
         response = await client.create_page(
@@ -86,6 +100,30 @@ class ConfluenceService:
             parent_id=parent_id,
             representation="storage",  # Use storage representation for converted content
         )
+
+        page_id = response.get("id")
+
+        # Attach files if provided
+        if attachments and page_id:
+            logger.info(f"Attaching {len(attachments)} file(s) to page {page_id}")
+            for attachment in attachments:
+                try:
+                    local_path = attachment.get("local_path")
+                    name_on_confluence = attachment.get("name_on_confluence")
+
+                    if not local_path or not name_on_confluence:
+                        logger.warning(f"Skipping invalid attachment: {attachment}")
+                        continue
+
+                    client.attach_file(
+                        page_id=page_id,
+                        file_path=local_path,
+                        attachment_name=name_on_confluence,
+                    )
+                    logger.info(f"Successfully attached {name_on_confluence}")
+                except Exception as e:
+                    logger.error(f"Failed to attach file {attachment}: {e}")
+                    # Continue with other attachments even if one fails
 
         # Extract domain from URL for the return URL
         domain = (
@@ -111,16 +149,21 @@ class ConfluenceService:
         expected_version: int,
         site_alias: Optional[str] = None,
         minor_edit: bool = False,
+        attachments: Optional[List[Dict[str, str]]] = None,
     ) -> Dict:
         """Update an existing Confluence page with new markdown content
 
         Args:
             space_key: The key of the Confluence space
             title: The title of the page to update
-            content: New markdown content for the page
+            content: New markdown content for the page (or storage format if contains images)
             expected_version: The version number we expect the page to be at
             site_alias: Optional site alias for multi-site configurations
             minor_edit: Whether this is a minor edit (to avoid notification spam)
+            attachments: Optional list of attachments to upload
+                Each attachment dict should have:
+                - local_path: Path to the file on local filesystem
+                - name_on_confluence: Name for the attachment on Confluence
 
         Returns:
             Dict containing the updated page information
@@ -144,17 +187,49 @@ class ConfluenceService:
                 f"Version mismatch: expected {expected_version}, but page is at version {current_version}"
             )
 
-        # Convert markdown to Confluence storage format using md2cf
-        from md2cf.confluence_renderer import ConfluenceRenderer
-        import mistune
+        page_id = current_page["id"]
 
-        renderer = ConfluenceRenderer()
-        markdown_parser = mistune.Markdown(renderer=renderer)
-        confluence_content = markdown_parser(content)
+        # Attach files if provided (before updating content so images can be embedded)
+        if attachments:
+            logger.info(f"Attaching {len(attachments)} file(s) to page {page_id}")
+            for attachment in attachments:
+                try:
+                    local_path = attachment.get("local_path")
+                    name_on_confluence = attachment.get("name_on_confluence")
+
+                    if not local_path or not name_on_confluence:
+                        logger.warning(f"Skipping invalid attachment: {attachment}")
+                        continue
+
+                    client.attach_file(
+                        page_id=page_id,
+                        file_path=local_path,
+                        attachment_name=name_on_confluence,
+                    )
+                    logger.info(f"Successfully attached {name_on_confluence}")
+                except Exception as e:
+                    logger.error(f"Failed to attach file {attachment}: {e}")
+                    # Continue with other attachments even if one fails
+
+        # Check if content is already in storage format (contains ac:image tags)
+        is_storage_format = "<ac:image" in content or "<ri:attachment" in content
+
+        if is_storage_format:
+            # Content is already in storage format, use as-is
+            confluence_content = content
+            logger.info("Content is already in Confluence storage format")
+        else:
+            # Convert markdown to Confluence storage format using md2cf
+            import mistune
+            from md2cf.confluence_renderer import ConfluenceRenderer
+
+            renderer = ConfluenceRenderer()
+            markdown_parser = mistune.Markdown(renderer=renderer)
+            confluence_content = markdown_parser(content)
 
         # Update the page using the client's update_page method
         response = client.confluence.update_page(
-            page_id=current_page["id"],
+            page_id=page_id,
             title=title,
             body=confluence_content,
             type="page",

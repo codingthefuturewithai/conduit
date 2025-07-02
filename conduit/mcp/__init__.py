@@ -3,7 +3,8 @@
 import asyncio
 import logging
 import sys
-from .server import server, create_mcp_server
+
+from .server import create_mcp_server, server
 
 __all__ = ["server", "create_mcp_server"]
 

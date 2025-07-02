@@ -1,9 +1,8 @@
 """Content management module for handling formatted text content."""
 
-from pathlib import Path
-import uuid
 import shutil
-from typing import Optional
+import uuid
+from pathlib import Path
 
 from conduit.core.logger import logger
 

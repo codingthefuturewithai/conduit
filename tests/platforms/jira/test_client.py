@@ -1,7 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-from conduit.platforms.jira.client import JiraClient
+
 from conduit.core.exceptions import PlatformError
+from conduit.platforms.jira.client import JiraClient
 
 
 @pytest.fixture

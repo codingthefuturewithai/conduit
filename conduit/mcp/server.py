@@ -1,18 +1,24 @@
 """MCP server implementation for Conduit"""
 
-from typing import Dict, List, Any
-from mcp.server.fastmcp import FastMCP
-import mcp.types as types
+import datetime
 import logging
 import sys
-import asyncio
-import click
-import datetime
-import importlib.metadata
+from typing import Any, Dict, List
 
-from conduit.core.services import ConfluenceService
+import click
+import mcp.types as types
+from mcp.server.fastmcp import FastMCP
+from pydantic import BaseModel
+
 from conduit.core.config import load_config
+from conduit.core.services import ConfluenceService
 from conduit.platforms.registry import PlatformRegistry
+
+
+class AttachmentSpec(BaseModel):
+    """Specification for a file attachment"""
+    local_path: str
+    name_on_confluence: str
 
 # Configure logging to write to stderr instead of a file
 logging.basicConfig(
@@ -569,7 +575,8 @@ def register_tools(mcp_server: FastMCP) -> None:
 
     @mcp_server.tool(
         name="create_confluence_page_from_markdown",
-        description="Create a new Confluence page from markdown content, automatically converting it to Confluence storage format",
+        description="Create a new Confluence page from markdown content, automatically converting it to Confluence storage format. "
+        "Supports attaching images that can be embedded in the page content.",
     )
     async def create_confluence_page(
         space: str,
@@ -577,18 +584,48 @@ def register_tools(mcp_server: FastMCP) -> None:
         content: str,
         parent_id: str = None,
         site_alias: str = None,
+        attachments: List[AttachmentSpec] = None,
     ) -> list[types.TextContent]:
-        """Create a new Confluence page with markdown content"""
+        """Create a new Confluence page with markdown content and optional attachments.
+
+        Args:
+            space: The key of the Confluence space
+            title: The title of the page to create
+            content: Markdown content or storage format with embedded images
+            parent_id: Optional ID of the parent page
+            site_alias: Optional site alias for multi-site configurations
+            attachments: Optional list of attachments, each with:
+                - local_path: Path to the file on local filesystem
+                - name_on_confluence: Name for the attachment on Confluence
+
+        To embed attached images, use Confluence storage format in content:
+        <ac:image><ri:attachment ri:filename="image.png" /></ac:image>
+        """
         try:
             logger.info(f"Creating Confluence page in space {space} with title {title}")
+            logger.warning(f"DEBUG CREATE: Received attachments parameter: {attachments}, type: {type(attachments)}")
+            if attachments:
+                logger.info(f"Will attach {len(attachments)} file(s)")
 
             # Use the existing service to create the page
+            # Convert AttachmentSpec objects to dicts for the service
+            attachment_dicts = None
+            if attachments:
+                # Handle both dict and AttachmentSpec objects
+                attachment_dicts = []
+                for att in attachments:
+                    if isinstance(att, dict):
+                        attachment_dicts.append(att)
+                    else:
+                        attachment_dicts.append(att.model_dump())
+            
             page = await ConfluenceService.create_page_from_markdown(
                 space_key=space,
                 title=title,
                 content=content,
                 parent_id=parent_id,
                 site_alias=site_alias,
+                attachments=attachment_dicts,
             )
 
             # Format the response
@@ -601,6 +638,15 @@ def register_tools(mcp_server: FastMCP) -> None:
 
             if parent_id:
                 result += f"- **Parent ID**: {parent_id}\n"
+
+            if attachments:
+                result += "\n## Attachments\n"
+                result += f"Successfully attached {len(attachments)} file(s):\n"
+                for att in attachments:
+                    if isinstance(att, dict):
+                        result += f"- {att['name_on_confluence']}\n"
+                    else:
+                        result += f"- {att.name_on_confluence}\n"
 
             return [types.TextContent(type="text", text=result)]
         except Exception as e:
@@ -779,7 +825,8 @@ def register_tools(mcp_server: FastMCP) -> None:
     @mcp_server.tool(
         name="update_confluence_page",
         description="Update an existing Confluence page with version conflict handling. "
-        "Supports marking updates as minor edits to avoid notification spam for small changes.",
+        "Supports marking updates as minor edits to avoid notification spam for small changes. "
+        "Can also attach new images to embed in the updated content.",
     )
     async def update_confluence_page(
         space_key: str,
@@ -788,24 +835,45 @@ def register_tools(mcp_server: FastMCP) -> None:
         expected_version: int,
         site_alias: str = None,
         minor_edit: bool = False,  # Set to True for small changes like typo fixes or formatting adjustments
+        attachments: List[AttachmentSpec] = None,
     ) -> list[types.TextContent]:
-        """Update a Confluence page with version conflict detection.
+        """Update a Confluence page with version conflict detection and optional attachments.
 
         Args:
             space_key: The key of the space containing the page
             title: The title of the page to update
-            content: New markdown content for the page
+            content: New markdown content or storage format with embedded images
             expected_version: The version number we expect the page to be at
             site_alias: Optional site alias for multi-site configurations
             minor_edit: Set to True for small changes (typos, formatting) to avoid notification spam.
                        Set to False for substantial content changes that watchers should know about.
+            attachments: Optional list of attachments, each with:
+                - local_path: Path to the file on local filesystem
+                - name_on_confluence: Name for the attachment on Confluence
+
+        To embed attached images, use Confluence storage format in content:
+        <ac:image><ri:attachment ri:filename="image.png" /></ac:image>
         """
         try:
             logger.debug(
                 f"Executing update_confluence_page for '{title}' in space {space_key} with expected version {expected_version}"
             )
+            logger.warning(f"DEBUG: Received attachments parameter: {attachments}, type: {type(attachments)}")
+            if attachments:
+                logger.info(f"Will attach {len(attachments)} file(s)")
 
             try:
+                # Convert AttachmentSpec objects to dicts for the service
+                attachment_dicts = None
+                if attachments:
+                    # Handle both dict and AttachmentSpec objects
+                    attachment_dicts = []
+                    for att in attachments:
+                        if isinstance(att, dict):
+                            attachment_dicts.append(att)
+                        else:
+                            attachment_dicts.append(att.model_dump())
+                
                 # Use the service to update the page
                 page = await ConfluenceService.update_page_from_markdown(
                     space_key=space_key,
@@ -814,23 +882,29 @@ def register_tools(mcp_server: FastMCP) -> None:
                     expected_version=expected_version,
                     site_alias=site_alias,
                     minor_edit=minor_edit,
+                    attachments=attachment_dicts,
                 )
 
                 # Return success message with new version info
-                return [
-                    types.TextContent(
-                        type="text",
-                        text=f"""# Page Updated Successfully
+                result = f"""# Page Updated Successfully
 
 - Title: {title}
 - Space: {space_key}
 - New Version: {page.get('response', {}).get('version', {}).get('number')}
 - Last Updated: {page.get('response', {}).get('version', {}).get('when')}
-- URL: {page.get('url')}
+- URL: {page.get('url')}"""
 
-The page has been updated successfully.""",
-                    )
-                ]
+                if attachments:
+                    result += f"\n\n## Attachments\nSuccessfully attached {len(attachments)} file(s):\n"
+                    for att in attachments:
+                        if isinstance(att, dict):
+                            result += f"- {att['name_on_confluence']}\n"
+                        else:
+                            result += f"- {att.name_on_confluence}\n"
+
+                result += "\n\nThe page has been updated successfully."
+
+                return [types.TextContent(type="text", text=result)]
 
             except ValueError as e:
                 if "Version mismatch" in str(e):
@@ -976,7 +1050,9 @@ server = create_mcp_server()
 
 
 @click.command()
-@click.option("--version", is_flag=True, help="Show the Conduit MCP server version and exit.")
+@click.option(
+    "--version", is_flag=True, help="Show the Conduit MCP server version and exit."
+)
 @click.option(
     "--transport",
     type=click.Choice(["stdio", "sse"]),
@@ -987,6 +1063,7 @@ def main(version: bool, transport: str):
     """Entry point for the MCP server"""
     if version:
         import importlib.metadata
+
         try:
             version_str = importlib.metadata.version("conduit-connect")
             click.echo(f"Conduit MCP server version {version_str}")
@@ -997,6 +1074,7 @@ def main(version: bool, transport: str):
     # Imports below are intentionally placed here to avoid side effects
     # when --version is passed (no server or logging should be initialized).
     import asyncio
+
     from conduit.core.logger import logger
     from conduit.mcp import server
 

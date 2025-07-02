@@ -70,6 +70,11 @@ By bridging the gaps between your development tools and making them AI-accessibl
   - Create new pages with markdown content
   - Automatic markdown to Confluence storage format conversion
   - Support for parent-child page relationships
+  - Image attachment support:
+    - Attach images to new or existing pages
+    - Embed attached images directly in page content
+    - Automatic content type detection for attachments
+    - Support for multiple attachments per operation
 
 - **Configuration & Usability**
 
@@ -619,6 +624,38 @@ page = await ConfluenceService.create_page_from_markdown(
     site_alias=None  # Optional site alias
 )
 
+# Create a page with image attachments
+attachments = [
+    {"local_path": "/path/to/screenshot.png", "name_on_confluence": "app-screenshot.png"},
+    {"local_path": "/path/to/diagram.jpg", "name_on_confluence": "architecture.jpg"}
+]
+
+# Content with embedded images (using Confluence storage format)
+content_with_images = """
+<h1>Page with Images</h1>
+<p>Here's our application screenshot:</p>
+<ac:image><ri:attachment ri:filename="app-screenshot.png" /></ac:image>
+<p>And the architecture diagram:</p>
+<ac:image><ri:attachment ri:filename="architecture.jpg" /></ac:image>
+"""
+
+page_with_images = await ConfluenceService.create_page_from_markdown(
+    space_key="SPACE",
+    title="Page with Embedded Images",
+    content=content_with_images,
+    attachments=attachments
+)
+
+# Update an existing page with new attachments
+await ConfluenceService.update_page_from_markdown(
+    space_key="SPACE",
+    title="Existing Page",
+    content=updated_content_with_images,
+    expected_version=2,  # Current version number
+    attachments=new_attachments,
+    minor_edit=True  # Mark as minor edit to avoid notifications
+)
+
 # The returned page object contains:
 # - id: The ID of the created page
 # - title: The title of the page
@@ -670,6 +707,11 @@ Conduit provides support for Anthropic's Model Context Protocol, allowing integr
   - Automatically converts markdown to Confluence storage format
   - Supports standard markdown syntax including headings, lists, tables, and code blocks
   - Returns the created page URL for easy access
+  - **NEW**: Attach images to pages during creation
+  - **NEW**: Embed attached images using Confluence storage format
+- Update existing pages with version conflict handling
+  - **NEW**: Attach new images during page updates
+  - Supports minor edits to avoid notification spam
 
 **Jira Operations**
 
