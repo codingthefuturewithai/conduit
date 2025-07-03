@@ -1,4 +1,5 @@
 from typing import Dict, List, Optional
+import re
 
 from conduit.core.config import load_config
 from conduit.core.logger import logger
@@ -16,6 +17,40 @@ class ConfigService:
             "jira": config.jira.dict(),
             "confluence": config.confluence.dict(),
         }
+
+
+def convert_markdown_images_to_storage(content: str, attachment_filenames: List[str]) -> str:
+    """Convert markdown image references to Confluence storage format for attachments.
+    
+    This function converts markdown image syntax ![alt](filename) to Confluence storage
+    format ONLY for images that are being attached to the page. External images and
+    images not in the attachment list remain as markdown.
+    
+    Args:
+        content: The markdown content containing image references
+        attachment_filenames: List of filenames that are being attached
+        
+    Returns:
+        Content with attachment images converted to storage format
+    """
+    def replace_image(match):
+        alt_text = match.group(1)
+        image_ref = match.group(2)
+        
+        # Extract filename from path (handle both simple names and paths)
+        filename = image_ref.split('/')[-1]
+        
+        # Only convert if this filename is in our attachments list
+        if filename in attachment_filenames:
+            logger.info(f"Converting markdown image '{filename}' to Confluence storage format")
+            return f'<ac:image><ri:attachment ri:filename="{filename}" /></ac:image>'
+        else:
+            # Keep as markdown for external images or non-attached images
+            return match.group(0)
+    
+    # Pattern matches ![alt](src) - alt text can be empty
+    pattern = r'!\[([^\]]*)\]\(([^)]+)\)'
+    return re.sub(pattern, replace_image, content)
 
 
 class ConfluenceService:
@@ -58,7 +93,7 @@ class ConfluenceService:
         Args:
             space_key: The key of the Confluence space
             title: The title of the page to create
-            content: Markdown content for the page (or storage format if contains images)
+            content: Markdown content for the page
             parent_id: Optional ID of the parent page
             site_alias: Optional site alias for multi-site configurations
             attachments: Optional list of attachments to upload
@@ -75,22 +110,20 @@ class ConfluenceService:
         site_config = confluence_config.get_site_config(site_alias)
         client.connect()  # Ensure we're connected
 
-        # Check if content is already in storage format (contains ac:image tags)
-        is_storage_format = "<ac:image" in content or "<ri:attachment" in content
+        # If we have attachments, convert markdown image references to storage format
+        if attachments:
+            attachment_filenames = [att.get("name_on_confluence", "") for att in attachments if att.get("name_on_confluence")]
+            content = convert_markdown_images_to_storage(content, attachment_filenames)
+            logger.info(f"Converted markdown image references for {len(attachment_filenames)} attachments")
 
-        if is_storage_format:
-            # Content is already in storage format, use as-is
-            confluence_content = content
-            logger.info("Content is already in Confluence storage format")
-        else:
-            # Convert markdown to Confluence storage format using md2cf
-            import mistune
-            from md2cf.confluence_renderer import ConfluenceRenderer
+        # Convert markdown to Confluence storage format using md2cf
+        import mistune
+        from md2cf.confluence_renderer import ConfluenceRenderer
 
-            # Convert Markdown to Confluence Storage Format
-            renderer = ConfluenceRenderer()
-            markdown_parser = mistune.Markdown(renderer=renderer)
-            confluence_content = markdown_parser(content)
+        # Convert Markdown to Confluence Storage Format
+        renderer = ConfluenceRenderer()
+        markdown_parser = mistune.Markdown(renderer=renderer)
+        confluence_content = markdown_parser(content)
 
         # Create the page using the client's API with storage representation
         response = await client.create_page(
@@ -156,7 +189,7 @@ class ConfluenceService:
         Args:
             space_key: The key of the Confluence space
             title: The title of the page to update
-            content: New markdown content for the page (or storage format if contains images)
+            content: New markdown content for the page
             expected_version: The version number we expect the page to be at
             site_alias: Optional site alias for multi-site configurations
             minor_edit: Whether this is a minor edit (to avoid notification spam)
@@ -190,6 +223,7 @@ class ConfluenceService:
         page_id = current_page["id"]
 
         # Attach files if provided (before updating content so images can be embedded)
+        attachment_filenames = []
         if attachments:
             logger.info(f"Attaching {len(attachments)} file(s) to page {page_id}")
             for attachment in attachments:
@@ -207,25 +241,23 @@ class ConfluenceService:
                         attachment_name=name_on_confluence,
                     )
                     logger.info(f"Successfully attached {name_on_confluence}")
+                    attachment_filenames.append(name_on_confluence)
                 except Exception as e:
                     logger.error(f"Failed to attach file {attachment}: {e}")
                     # Continue with other attachments even if one fails
 
-        # Check if content is already in storage format (contains ac:image tags)
-        is_storage_format = "<ac:image" in content or "<ri:attachment" in content
+        # If we have attachments, convert markdown image references to storage format
+        if attachment_filenames:
+            content = convert_markdown_images_to_storage(content, attachment_filenames)
+            logger.info(f"Converted markdown image references for {len(attachment_filenames)} attachments")
 
-        if is_storage_format:
-            # Content is already in storage format, use as-is
-            confluence_content = content
-            logger.info("Content is already in Confluence storage format")
-        else:
-            # Convert markdown to Confluence storage format using md2cf
-            import mistune
-            from md2cf.confluence_renderer import ConfluenceRenderer
+        # Convert markdown to Confluence storage format using md2cf
+        import mistune
+        from md2cf.confluence_renderer import ConfluenceRenderer
 
-            renderer = ConfluenceRenderer()
-            markdown_parser = mistune.Markdown(renderer=renderer)
-            confluence_content = markdown_parser(content)
+        renderer = ConfluenceRenderer()
+        markdown_parser = mistune.Markdown(renderer=renderer)
+        confluence_content = markdown_parser(content)
 
         # Update the page using the client's update_page method
         response = client.confluence.update_page(

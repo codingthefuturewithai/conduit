@@ -576,8 +576,8 @@ def register_tools(mcp_server: FastMCP) -> None:
     @mcp_server.tool(
         name="create_confluence_page_from_markdown",
         description="Create a new Confluence page from markdown content, automatically converting it to Confluence storage format. "
-        "Supports attaching images that can be embedded in the page content. "
-        "To embed attached images, use Confluence storage format: <ac:image><ri:attachment ri:filename=\"image.png\" /></ac:image>",
+        "Can attach and embed images - use standard markdown syntax: ![alt text](filename.png). "
+        "Images referenced in markdown that match attachment filenames will be automatically embedded.",
     )
     async def create_confluence_page(
         space: str,
@@ -592,15 +592,17 @@ def register_tools(mcp_server: FastMCP) -> None:
         Args:
             space: The key of the Confluence space
             title: The title of the page to create
-            content: Markdown content or storage format with embedded images
+            content: Markdown content with standard markdown image syntax
             parent_id: Optional ID of the parent page
             site_alias: Optional site alias for multi-site configurations
             attachments: Optional list of attachments, each with:
                 - local_path: Path to the file on local filesystem
                 - name_on_confluence: Name for the attachment on Confluence
 
-        To embed attached images, use Confluence storage format in content:
-        <ac:image><ri:attachment ri:filename="image.png" /></ac:image>
+        To embed attached images, use standard markdown syntax:
+        ![Image description](filename.png)
+        
+        The filename must match the name_on_confluence of an attachment.
         """
         try:
             logger.info(f"Creating Confluence page in space {space} with title {title}")
@@ -824,11 +826,11 @@ def register_tools(mcp_server: FastMCP) -> None:
             ]
 
     @mcp_server.tool(
-        name="update_confluence_page",
-        description="Update an existing Confluence page with version conflict handling. "
-        "Supports marking updates as minor edits to avoid notification spam for small changes. "
-        "Can also attach new images to embed in the updated content. "
-        "To embed attached images, use Confluence storage format: <ac:image><ri:attachment ri:filename=\"image.png\" /></ac:image>",
+        name="update_confluence_page_from_markdown",
+        description="Update an existing Confluence page with markdown content, automatically converting it to Confluence storage format. "
+        "Supports version conflict detection and marking updates as minor edits. "
+        "Can attach and embed images - use standard markdown syntax: ![alt text](filename.png). "
+        "Images referenced in markdown that match attachment filenames will be automatically embedded.",
     )
     async def update_confluence_page(
         space_key: str,
@@ -844,7 +846,7 @@ def register_tools(mcp_server: FastMCP) -> None:
         Args:
             space_key: The key of the space containing the page
             title: The title of the page to update
-            content: New markdown content or storage format with embedded images
+            content: New markdown content with standard markdown image syntax
             expected_version: The version number we expect the page to be at
             site_alias: Optional site alias for multi-site configurations
             minor_edit: Set to True for small changes (typos, formatting) to avoid notification spam.
@@ -853,8 +855,10 @@ def register_tools(mcp_server: FastMCP) -> None:
                 - local_path: Path to the file on local filesystem
                 - name_on_confluence: Name for the attachment on Confluence
 
-        To embed attached images, use Confluence storage format in content:
-        <ac:image><ri:attachment ri:filename="image.png" /></ac:image>
+        To embed attached images, use standard markdown syntax:
+        ![Image description](filename.png)
+        
+        The filename must match the name_on_confluence of an attachment.
         """
         try:
             logger.debug(
