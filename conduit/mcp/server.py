@@ -576,7 +576,8 @@ def register_tools(mcp_server: FastMCP) -> None:
     @mcp_server.tool(
         name="create_confluence_page_from_markdown",
         description="Create a new Confluence page from markdown content, automatically converting it to Confluence storage format. "
-        "Supports attaching images that can be embedded in the page content.",
+        "Supports attaching images that can be embedded in the page content. "
+        "To embed attached images, use Confluence storage format: <ac:image><ri:attachment ri:filename=\"image.png\" /></ac:image>",
     )
     async def create_confluence_page(
         space: str,
@@ -826,7 +827,8 @@ def register_tools(mcp_server: FastMCP) -> None:
         name="update_confluence_page",
         description="Update an existing Confluence page with version conflict handling. "
         "Supports marking updates as minor edits to avoid notification spam for small changes. "
-        "Can also attach new images to embed in the updated content.",
+        "Can also attach new images to embed in the updated content. "
+        "To embed attached images, use Confluence storage format: <ac:image><ri:attachment ri:filename=\"image.png\" /></ac:image>",
     )
     async def update_confluence_page(
         space_key: str,
