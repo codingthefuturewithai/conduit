@@ -211,8 +211,12 @@ class ConfluenceService:
 
         page_id = current_page["id"]
 
-        # Attach files if provided (before updating content so images can be embedded)
+        # Build list of attachment filenames FIRST (before attaching)
         attachment_filenames = []
+        if attachments:
+            attachment_filenames = [att.get("name_on_confluence", "") for att in attachments if att.get("name_on_confluence")]
+            
+        # Attach files if provided
         if attachments:
             logger.info(f"Attaching {len(attachments)} file(s) to page {page_id}")
             for attachment in attachments:
@@ -230,7 +234,6 @@ class ConfluenceService:
                         attachment_name=name_on_confluence,
                     )
                     logger.info(f"Successfully attached {name_on_confluence}")
-                    attachment_filenames.append(name_on_confluence)
                 except Exception as e:
                     logger.error(f"Failed to attach file {attachment}: {e}")
                     # Continue with other attachments even if one fails
