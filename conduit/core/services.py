@@ -78,6 +78,29 @@ class ConfluenceService:
         site_config = confluence_config.get_site_config(site_alias)
         client.connect()  # Ensure we're connected
 
+        # Pre-process markdown to normalize image paths before md2cf conversion
+        import re
+        processed_content = content
+        
+        if attachments:
+            # Build a mapping of filenames to their attachment names
+            attachment_filenames = [att.get("name_on_confluence", "") for att in attachments if att.get("name_on_confluence")]
+            
+            # Replace any image references that point to files we're attaching
+            # This handles both full paths and relative paths
+            for att in attachments:
+                local_path = att.get("local_path", "")
+                confluence_name = att.get("name_on_confluence", "")
+                if local_path and confluence_name:
+                    # Replace full path references with just the filename
+                    # This ensures md2cf will treat them as attachments
+                    processed_content = processed_content.replace(f']({local_path})', f']({confluence_name})')
+                    # Also handle cases where the path might be quoted
+                    processed_content = processed_content.replace(f']("{local_path}")', f']({confluence_name})')
+                    processed_content = processed_content.replace(f"]'{local_path}')", f']({confluence_name})')
+            
+            logger.info(f"Pre-processed markdown to normalize {len(attachments)} image paths")
+        
         # Convert markdown to Confluence storage format using md2cf
         import mistune
         from md2cf.confluence_renderer import ConfluenceRenderer
@@ -85,7 +108,7 @@ class ConfluenceService:
         # Create renderer with use_xhtml=True to properly handle images
         renderer = ConfluenceRenderer(use_xhtml=True)
         markdown_parser = mistune.Markdown(renderer=renderer)
-        confluence_content = markdown_parser(content)
+        confluence_content = markdown_parser(processed_content)
         
         # Log any attachments that md2cf found
         if renderer.attachments:
@@ -212,6 +235,29 @@ class ConfluenceService:
                     logger.error(f"Failed to attach file {attachment}: {e}")
                     # Continue with other attachments even if one fails
 
+        # Pre-process markdown to normalize image paths before md2cf conversion
+        import re
+        processed_content = content
+        
+        if attachments:
+            # Build a mapping of filenames to their attachment names
+            attachment_filenames = [att.get("name_on_confluence", "") for att in attachments if att.get("name_on_confluence")]
+            
+            # Replace any image references that point to files we're attaching
+            # This handles both full paths and relative paths
+            for att in attachments:
+                local_path = att.get("local_path", "")
+                confluence_name = att.get("name_on_confluence", "")
+                if local_path and confluence_name:
+                    # Replace full path references with just the filename
+                    # This ensures md2cf will treat them as attachments
+                    processed_content = processed_content.replace(f']({local_path})', f']({confluence_name})')
+                    # Also handle cases where the path might be quoted
+                    processed_content = processed_content.replace(f']("{local_path}")', f']({confluence_name})')
+                    processed_content = processed_content.replace(f"]'{local_path}')", f']({confluence_name})')
+            
+            logger.info(f"Pre-processed markdown to normalize {len(attachments)} image paths")
+        
         # Convert markdown to Confluence storage format using md2cf
         import mistune
         from md2cf.confluence_renderer import ConfluenceRenderer
@@ -219,7 +265,7 @@ class ConfluenceService:
         # Create renderer with use_xhtml=True to properly handle images
         renderer = ConfluenceRenderer(use_xhtml=True)
         markdown_parser = mistune.Markdown(renderer=renderer)
-        confluence_content = markdown_parser(content)
+        confluence_content = markdown_parser(processed_content)
         
         # Log any attachments that md2cf found
         if renderer.attachments:
