@@ -6,6 +6,14 @@ Conduit is a Python-based integration framework designed to provide a unified, c
 
 Conduit offers a full-featured command line interface and support for Anthropic's Model Context Protocol (MCP). While the CLI provides access to all of Conduit's capabilities, the MCP integration currently supports a focused set of core features. This allows for both comprehensive command-line usage and integration with AI tools that support MCP, such as Cursor and Claude Desktop.
 
+## Quick Start with AI Assistant
+
+**Need help setting up Conduit's MCP server?** Have your AI coding assistant guide you through the entire setup process!
+
+Simply tell your AI assistant: *"Please read and execute the setup instructions in [SETUP_ASSISTANT_PROMPT.md](SETUP_ASSISTANT_PROMPT.md)"*
+
+**After setup**, explore Conduit's capabilities by telling your AI assistant: *"Please read [USAGE_ASSISTANT_PROMPT.md](USAGE_ASSISTANT_PROMPT.md) and show me what Conduit can do"*
+
 ## Why Conduit?
 
 Modern software development teams rely on an ever-growing array of specialized tools throughout their development lifecycle - from issue tracking and documentation to version control and CI/CD. While each tool excels at its specific purpose, the fragmentation between these tools creates significant friction:
