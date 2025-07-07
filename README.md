@@ -14,26 +14,6 @@ Simply tell your AI assistant: *"Please read and execute the setup instructions 
 
 **After setup**, explore Conduit's capabilities by telling your AI assistant: *"Please read [USAGE_ASSISTANT_PROMPT.md](USAGE_ASSISTANT_PROMPT.md) and show me what Conduit can do"*
 
-## Why Conduit?
-
-Modern software development teams rely on an ever-growing array of specialized tools throughout their development lifecycle - from issue tracking and documentation to version control and CI/CD. While each tool excels at its specific purpose, the fragmentation between these tools creates significant friction:
-
-- Developers constantly context-switch between different tools and environments
-- Information is scattered across multiple platforms, making it hard to find and connect related content
-- Copy-pasting between tools is error-prone and time-consuming
-- AI assistants lack unified access to your team's knowledge and workflows
-- Integration efforts are often manual and don't scale well
-
-Conduit aims to solve these challenges by:
-
-1. **Unified Access**: Creating a single, consistent interface to interact with all your development tools
-2. **AI-First Design**: Making your tools' data and functionality readily available to AI assistants
-3. **Seamless Integration**: Eliminating manual copying and context switching between tools
-4. **Knowledge Connection**: Linking related information across different platforms automatically
-5. **Workflow Automation**: Enabling automated workflows that span multiple tools
-
-By bridging the gaps between your development tools and making them AI-accessible, Conduit helps teams stay focused on building great software rather than juggling tools.
-
 ## Features
 
 - **Jira Integration**
