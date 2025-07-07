@@ -56,3 +56,9 @@ coverage.xml
 logs/
 
 uv.lock
+
+# Workflow directory (local development only)
+workflows/
+
+# Backup directory for temporary files
+backup_temp_files/
