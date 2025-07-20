@@ -178,19 +178,20 @@ For contributing or development:
 git clone https://github.com/yourusername/conduit.git
 cd conduit
 
-# Create and activate virtual environment
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+# Create a virtual environment using uv
+uv venv
 
-# Install in development mode
-pip install --upgrade pip  # Ensure latest pip
-pip install -e .  # Install the package in editable mode
+# Activate the virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install in development mode with uv
+uv pip install -e .  # Install the package in editable mode
 ```
 
 The development dependencies will be installed automatically. If you need to install them manually:
 
 ```bash
-pip install pytest black isort mypy ruff
+uv pip install pytest black isort mypy ruff
 ```
 
 Note: Make sure you're in the root directory of the project where `pyproject.toml` is located when running the installation commands.
@@ -817,7 +818,7 @@ For more details, see the [Claude Desktop MCP documentation](https://modelcontex
 1. Install development dependencies:
 
 ```bash
-pip install -e ".[dev]"
+uv pip install -e ".[dev]"
 ```
 
 2. Run tests:
