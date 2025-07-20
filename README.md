@@ -112,57 +112,62 @@ The project follows a modular architecture designed for extensibility:
 ### Requirements
 
 - Python 3.10 or higher (Python 3.12 is the latest supported version)
-- pip, pipx, or uv package installer
+- uv package installer (recommended for isolated installations)
 
-### Using pipx (Recommended)
+### Using uv tool (Recommended)
 
-pipx provides isolated environments for Python applications, ensuring clean installation and easy updates.
+uv provides isolated tool installations, preventing dependency conflicts and ensuring clean environments.
 
-macOS/Linux:
-
-```bash
-# Install pipx if not already installed
-python -m pip install --user pipx
-python -m pipx ensurepath
-
-# Install conduit
-pipx install conduit-connect
-```
-
-Windows:
-
-```powershell
-# Install pipx if not already installed
-python -m pip install --user pipx
-python -m pipx ensurepath
-
-# Install conduit
-pipx install conduit-connect
-```
-
-### Using uv (Alternative)
-
-uv is a fast Python package installer and resolver.
+#### Install uv first:
 
 macOS/Linux:
-
 ```bash
-# Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install conduit
-uv pip install conduit-connect
 ```
 
 Windows:
-
 ```powershell
-# Install uv if not already installed
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# Install conduit
-uv pip install conduit-connect
 ```
+
+#### Install Conduit:
+
+```bash
+# Install as an isolated tool (recommended)
+uv tool install conduit-connect
+```
+
+#### Verify Installation and Get Binary Paths:
+
+After installation, verify and locate the installed binaries:
+
+```bash
+# Find the conduit CLI binary
+uv tool dir
+# The binaries will be in: <uv-tool-dir>/conduit-connect/bin/
+
+# Or use which/where commands
+which conduit           # macOS/Linux
+where conduit           # Windows
+
+# Find the MCP server binary
+which mcp-server-conduit   # macOS/Linux  
+where mcp-server-conduit   # Windows
+```
+
+Save these paths - you'll need them for configuring AI assistants.
+
+### Using uvx (Alternative - Quick Execution)
+
+For one-time or occasional use without permanent installation:
+
+```bash
+# Run conduit commands directly
+uvx conduit-connect --init
+uvx conduit-connect jira issue get PROJ-123
+```
+
+⚠️ **Warning**: uvx may have conflicts with other Python tools. If you encounter issues, use the `uv tool install` method above.
 
 ### Development Installation
 
@@ -744,10 +749,13 @@ For development and testing, you can run the Conduit MCP server directly and exp
 2. Get the full path to the MCP server:
 
 ```bash
+# After uv tool install
 which mcp-server-conduit
 ```
 
-This will output something like `/Users/<username>/.local/bin/mcp-server-conduit`
+This will output something like:
+- macOS/Linux: `/Users/<username>/.local/share/uv/tools/conduit-connect/bin/mcp-server-conduit`
+- Windows: `C:\Users\<username>\AppData\Local\uv\tools\conduit-connect\Scripts\mcp-server-conduit.exe`
 
 3. Configure Cursor:
    - Open Cursor Settings > Features > MCP Servers
@@ -766,20 +774,35 @@ For more details about MCP configuration in Cursor, see the [Cursor MCP document
 2. Get the full path to the MCP server:
 
 ```bash
+# After uv tool install
 which mcp-server-conduit
 ```
 
-This will output something like `/Users/<username>/.local/bin/mcp-server-conduit`
+This will output something like:
+- macOS/Linux: `/Users/<username>/.local/share/uv/tools/conduit-connect/bin/mcp-server-conduit`
+- Windows: `C:\Users\<username>\AppData\Local\uv\tools\conduit-connect\Scripts\mcp-server-conduit.exe`
 
 3. Configure Claude Desktop:
    - Open Claude menu > Settings > Developer > Edit Config
    - Add Conduit to the MCP servers configuration:
 
+macOS/Linux:
 ```json
 {
   "mcpServers": {
     "conduit": {
-      "command": "/Users/<username>/.local/bin/mcp-server-conduit"
+      "command": "/Users/<username>/.local/share/uv/tools/conduit-connect/bin/mcp-server-conduit"
+    }
+  }
+}
+```
+
+Windows:
+```json
+{
+  "mcpServers": {
+    "conduit": {
+      "command": "C:\\Users\\<username>\\AppData\\Local\\uv\\tools\\conduit-connect\\Scripts\\mcp-server-conduit.exe"
     }
   }
 }
@@ -842,31 +865,74 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Checking Your Installed Version
 
-To check which version of Conduit you have installed, run:
+To check which version of Conduit you have installed:
 
 ```bash
-uv pip show conduit-connect
-# or, if using pip:
-pip show conduit-connect
+# If installed with uv tool
+uv tool list | grep conduit-connect
+
+# Or check the tool directly
+conduit --version
 ```
 
 This will display the installed version and other package details.
 
 ## Upgrading Conduit
 
-To upgrade Conduit to the latest version, use the same tool you used to install it:
+To upgrade Conduit to the latest version:
 
-- If you used pip:
-  ```sh
-  pip install --upgrade conduit-connect
-  ```
+```bash
+# If installed with uv tool
+uv tool upgrade conduit-connect
 
-- If you used uv:
-  ```sh
-  uv pip install -U conduit-connect
-  ```
+# Or reinstall to get the latest version
+uv tool install --force conduit-connect
+```
 
-- If you used pipx:
-  ```sh
-  pipx upgrade conduit-connect
-  ```
+## Troubleshooting Installation
+
+### Dependency Conflicts
+
+If you encounter dependency conflicts during installation:
+
+1. **With uv tool install (recommended)**:
+   ```bash
+   # Force reinstall in isolated environment
+   uv tool install --force conduit-connect
+   ```
+
+2. **With uvx**:
+   ```bash
+   # Clear the uvx cache first
+   uvx cache clean
+   # Then run your command
+   uvx conduit-connect --init
+   ```
+
+### Binary Not Found
+
+If `conduit` or `mcp-server-conduit` commands are not found:
+
+1. **Check uv tool directory**:
+   ```bash
+   uv tool dir
+   # Add the bin directory to your PATH if needed
+   ```
+
+2. **Platform-specific paths**:
+   - macOS/Linux: `~/.local/share/uv/tools/conduit-connect/bin/`
+   - Windows: `%LOCALAPPDATA%\uv\tools\conduit-connect\Scripts\`
+
+3. **Verify installation**:
+   ```bash
+   uv tool list | grep conduit-connect
+   ```
+
+### Python Version Issues
+
+Conduit requires Python 3.10-3.12. If you have compatibility issues:
+
+```bash
+# Install with specific Python version
+uv tool install --python 3.12 conduit-connect
+```

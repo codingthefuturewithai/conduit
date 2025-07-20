@@ -20,7 +20,7 @@ You are helping a user set up Conduit's MCP server so their AI coding assistant 
 ### Important Notes
 - All testing and verification will be done through the AI assistant after MCP setup
 - Conduit has a Streamlit-based admin UI that has known limitations on Windows, but this doesn't affect MCP functionality
-- Users can install Conduit using pipx (recommended), uv, or pip
+- Users should install Conduit using uv tool (recommended) or uvx for isolated environments
 - You will help with everything EXCEPT the API token
 
 ## Prerequisites Check
@@ -50,92 +50,69 @@ First, determine the user's environment and available tools:
 
 3. **Package Manager Detection**:
    ```bash
-   # Check for pipx
-   pipx --version 2>/dev/null && echo "pipx is installed"
-   
    # Check for uv
    uv --version 2>/dev/null && echo "uv is installed"
-   
-   # Check for pip
-   pip --version 2>/dev/null && echo "pip is installed"
    ```
 
-4. **Ask User Preference**:
-   - "Which package manager would you prefer to use for installing Conduit?"
-   - If they have multiple options, explain:
-     - **pipx** (recommended): Provides isolated environment, easy updates
-     - **uv**: Fast installation, modern Python package manager
-     - **pip**: Traditional option, but may have dependency conflicts
+4. **Installation Method**:
+   - We'll use **uv tool** for isolated installation (recommended)
+   - This prevents dependency conflicts and ensures clean environment
+   - If uv is not installed, we'll install it first
 
 ## Installation Steps
 
-### Step 1: Install Conduit
+### Step 1: Install uv (if needed)
 
-Based on the user's preference and available tools:
-
-#### Option A: Using pipx (Recommended)
+First, check if uv is installed. If not, install it:
 
 **macOS/Linux:**
 ```bash
-# Install pipx if not already installed
-python -m pip install --user pipx
-python -m pipx ensurepath
-
-# You may need to restart your terminal or run:
-source ~/.bashrc  # or ~/.zshrc on macOS
-
-# Install conduit
-pipx install conduit-connect
-```
-
-**Windows:**
-```powershell
-# Install pipx if not already installed
-python -m pip install --user pipx
-python -m pipx ensurepath
-
-# Restart your terminal, then:
-pipx install conduit-connect
-```
-
-#### Option B: Using uv
-
-**macOS/Linux:**
-```bash
-# Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Install conduit
-uv pip install conduit-connect
 ```
 
 **Windows:**
 ```powershell
-# Install uv if not already installed
 powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
-
-# Install conduit
-uv pip install conduit-connect
 ```
 
-#### Option C: Using pip
+### Step 2: Install Conduit as an Isolated Tool
 
 ```bash
-# Not recommended for global installation
-pip install conduit-connect
+# Install Conduit as an isolated tool (recommended)
+uv tool install conduit-connect
 ```
 
-### Step 2: Verify Installation and Get MCP Server Path
+This creates an isolated environment preventing any dependency conflicts.
+
+### Alternative: Using uvx (Quick Execution)
+
+For one-time or testing use:
+```bash
+# Run conduit commands directly without permanent installation
+uvx conduit-connect --init
+```
+
+⚠️ **Note**: uvx may have conflicts with other Python tools. If you encounter issues, use the `uv tool install` method above.
+
+### Step 3: Verify Installation and Get MCP Server Path
 
 ```bash
-# Get the path to the MCP server (critical for MCP setup)
+# Find the uv tool directory
+uv tool dir
+# The binaries will be in: <uv-tool-dir>/conduit-connect/bin/
+
+# Or use which/where to get the exact path
 which mcp-server-conduit  # macOS/Linux
 where mcp-server-conduit  # Windows
 ```
 
-Save the full path from the above command - this is the most important piece of information for MCP configuration.
+Expected paths:
+- **macOS/Linux**: `~/.local/share/uv/tools/conduit-connect/bin/mcp-server-conduit`
+- **Windows**: `%LOCALAPPDATA%\uv\tools\conduit-connect\Scripts\mcp-server-conduit.exe`
 
-### Step 3: Initialize Configuration
+Save the full path - this is critical for MCP configuration.
+
+### Step 4: Initialize Configuration
 
 ```bash
 conduit --init
@@ -145,7 +122,7 @@ This creates a configuration file at:
 - **Linux/macOS**: `~/.config/conduit/config.yaml`
 - **Windows**: `%APPDATA%\conduit\config.yaml`
 
-### Step 4: Configure Atlassian Site Information
+### Step 5: Configure Atlassian Site Information
 
 Now we need to gather information about the user's Atlassian site:
 
@@ -201,7 +178,7 @@ Now we need to gather information about the user's Atlassian site:
          api_token: ""  # User will add later
    ```
 
-### Step 5: API Token Instructions
+### Step 6: API Token Instructions
 
 After updating the configuration file, provide these instructions to the user:
 
@@ -219,19 +196,19 @@ After updating the configuration file, provide these instructions to the user:
 
 Once you've added your API token, we can proceed with testing the connection."
 
-### Step 6: Prepare for MCP Configuration
+### Step 7: Prepare for MCP Configuration
 
 Wait for user confirmation that they've added their API token, then proceed directly to MCP setup.
 
 Note: We'll verify everything is working through the AI assistant after MCP is configured - no command-line testing needed.
 
-### Step 7: Configure AI Assistant MCP Integration
+### Step 8: Configure AI Assistant MCP Integration
 
 Determine which AI assistant the user is using:
 
 #### For Claude Code (Recommended Method):
 
-1. Get the MCP server path (from Step 2):
+1. Get the MCP server path (from Step 3):
    ```bash
    which mcp-server-conduit  # Save this path
    ```
@@ -241,30 +218,41 @@ Determine which AI assistant the user is using:
 
 3. Use the claude mcp add-json command to add Conduit:
    ```bash
-   # The exact path will vary based on OS and installation method
+   # The exact path will vary based on OS when using uv tool
    # Common paths:
-   # macOS with Homebrew: /opt/homebrew/bin/mcp-server-conduit
-   # macOS/Linux with pipx: ~/.local/bin/mcp-server-conduit
-   # Windows with pipx: C:\Users\[username]\AppData\Roaming\Python\Scripts\mcp-server-conduit.exe
+   # macOS/Linux: ~/.local/share/uv/tools/conduit-connect/bin/mcp-server-conduit
+   # Windows: C:\Users\[username]\AppData\Local\uv\tools\conduit-connect\Scripts\mcp-server-conduit.exe
    
    claude mcp add-json -s user Conduit '{"type":"stdio","command":"[YOUR_PATH_HERE]"}'
    ```
    
-   Replace `[YOUR_PATH_HERE]` with the actual path from the `which` command.
+   Replace `[YOUR_PATH_HERE]` with the actual path from Step 3.
 
 #### For Claude Desktop:
 
-1. Get the MCP server path (from Step 2)
+1. Get the MCP server path (from Step 3)
 2. Direct user to configure Claude:
    - Open Claude Desktop
    - Go to: Claude menu > Settings > Developer > Edit Config
    - Add Conduit to the configuration:
    
+   macOS/Linux:
    ```json
    {
      "mcpServers": {
        "conduit": {
-         "command": "/path/from/step1/mcp-server-conduit"
+         "command": "/Users/[username]/.local/share/uv/tools/conduit-connect/bin/mcp-server-conduit"
+       }
+     }
+   }
+   ```
+   
+   Windows:
+   ```json
+   {
+     "mcpServers": {
+       "conduit": {
+         "command": "C:\\Users\\[username]\\AppData\\Local\\uv\\tools\\conduit-connect\\Scripts\\mcp-server-conduit.exe"
        }
      }
    }
@@ -272,7 +260,7 @@ Determine which AI assistant the user is using:
 
 #### For Cursor:
 
-1. Get the MCP server path (from Step 2)
+1. Get the MCP server path (from Step 3)
 
 2. Direct user to configure Cursor using the GUI:
    - Open Cursor Settings (Cmd/Ctrl + ,)
@@ -282,10 +270,21 @@ Determine which AI assistant the user is using:
    - This opens the configuration file
 
 3. Add Conduit to the configuration:
+   
+   macOS/Linux:
    ```json
    {
      "Conduit": {
-       "command": "/opt/homebrew/bin/mcp-server-conduit"
+       "command": "/Users/[username]/.local/share/uv/tools/conduit-connect/bin/mcp-server-conduit"
+     }
+   }
+   ```
+   
+   Windows:
+   ```json
+   {
+     "Conduit": {
+       "command": "C:\\Users\\[username]\\AppData\\Local\\uv\\tools\\conduit-connect\\Scripts\\mcp-server-conduit.exe"
      }
    }
    ```
@@ -298,7 +297,7 @@ Determine which AI assistant the user is using:
 
 #### For Windsurf:
 
-1. Get the MCP server path (from Step 2)
+1. Get the MCP server path (from Step 3)
 
 2. Direct user to configure Windsurf:
    - Click the "Manage plugins" button in the bottom panel
@@ -307,11 +306,24 @@ Determine which AI assistant the user is using:
    - This opens the mcp_config.json file
 
 3. Add Conduit to the mcpServers section:
+   
+   macOS/Linux:
    ```json
    {
      "mcpServers": {
        "Conduit": {
-         "command": "/opt/homebrew/bin/mcp-server-conduit"
+         "command": "/Users/[username]/.local/share/uv/tools/conduit-connect/bin/mcp-server-conduit"
+       }
+     }
+   }
+   ```
+   
+   Windows:
+   ```json
+   {
+     "mcpServers": {
+       "Conduit": {
+         "command": "C:\\Users\\[username]\\AppData\\Local\\uv\\tools\\conduit-connect\\Scripts\\mcp-server-conduit.exe"
        }
      }
    }
@@ -365,17 +377,18 @@ Help the user troubleshoot any issues they encounter:
 ### Installation Issues
 
 1. **"Command not found" for mcp-server-conduit**:
-   - Ensure PATH is updated (may need terminal restart)
-   - For pipx: Run `python -m pipx ensurepath` and restart terminal
+   - Check uv tool directory: `uv tool dir`
    - Try finding the executable manually:
-     - macOS/Linux: `find ~/.local -name mcp-server-conduit 2>/dev/null`
-     - Windows: Search in `%APPDATA%\Python` or `%LOCALAPPDATA%`
+     - macOS/Linux: `find ~/.local/share/uv -name mcp-server-conduit 2>/dev/null`
+     - Windows: Search in `%LOCALAPPDATA%\uv\tools`
+   - Verify installation: `uv tool list | grep conduit-connect`
 
 2. **Installation fails**:
    - Check Python version (must be 3.10+)
-   - Try different package manager (pipx vs uv vs pip)
+   - Force reinstall: `uv tool install --force conduit-connect`
+   - Clear uv cache if needed: `uv cache clean`
    - On Windows, may need to run as administrator
-   - Clear pip cache: `pip cache purge`
+   - For dependency conflicts with uvx: `uvx cache clean`
 
 ### MCP Configuration Issues
 
@@ -422,8 +435,8 @@ Help the user troubleshoot any issues they encounter:
    - Admin UI has known limitations - this is normal
 
 9. **macOS-specific**:
-   - If using Homebrew Python, paths may be in `/opt/homebrew/`
-   - Check both `~/.local/bin` and `/opt/homebrew/bin`
+   - With uv tool, paths will be in `~/.local/share/uv/tools/`
+   - Check `uv tool dir` for exact location
 
 10. **Linux-specific**:
     - Ensure `~/.local/bin` is in PATH
@@ -472,7 +485,7 @@ Once the "list all my Atlassian site aliases" command works in the AI assistant:
 
 Before considering setup complete, verify:
 - [ ] Python 3.10+ is installed
-- [ ] Conduit is installed via pipx/uv/pip
+- [ ] Conduit is installed via uv tool
 - [ ] Configuration file is initialized
 - [ ] Atlassian URL and email are configured
 - [ ] User has been instructed to add API token manually
